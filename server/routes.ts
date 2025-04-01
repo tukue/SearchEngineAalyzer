@@ -12,6 +12,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   const apiRouter = express.Router();
 
+  // Health check endpoint for CI/CD
+  apiRouter.get("/health", (req, res) => {
+    res.status(200).json({
+      status: "ok",
+      message: "Meta Tag Analyzer API is healthy",
+      timestamp: new Date().toISOString(),
+      version: "1.0.0"
+    });
+  });
+
   // Analyze URL endpoint
   apiRouter.post("/analyze", async (req, res) => {
     try {

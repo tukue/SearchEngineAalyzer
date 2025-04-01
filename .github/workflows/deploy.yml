@@ -1,0 +1,43 @@
+name: Meta Tag Analyzer Deploy
+
+on:
+  workflow_run:
+    workflows: ["Meta Tag Analyzer CI"]
+    branches: [main, master]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build application
+        run: npm run build
+      
+      # Example deployment to a hosting service
+      # You can replace this with your actual deployment steps
+      - name: Deploy to production
+        run: |
+          echo "Deploying application to production..."
+          # Add your deployment commands here
+          # For example:
+          # - npm run deploy
+          # - Deploy to Netlify, Vercel, or your preferred hosting
+          echo "Deployment completed successfully!"
+        
+      - name: Notify about successful deployment
+        run: |
+          echo "✅ Meta Tag Analyzer has been deployed successfully!"
