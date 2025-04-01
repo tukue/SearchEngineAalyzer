@@ -7,9 +7,28 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link2, X, Loader2 } from "lucide-react";
 
-// Form schema for URL validation
+// Form schema for URL validation with improved error messages
 const formSchema = z.object({
-  url: z.string().trim().url("Please enter a valid URL")
+  url: z.string()
+    .trim()
+    .min(1, "URL is required")
+    .refine(
+      (value) => {
+        // Simple URL validation that allows for domain-only input
+        try {
+          const urlWithProtocol = value.startsWith('http://') || value.startsWith('https://') 
+            ? value 
+            : `https://${value}`;
+          new URL(urlWithProtocol);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      },
+      {
+        message: "Please enter a valid URL (e.g., example.com or https://example.com)"
+      }
+    )
 });
 
 type URLInputFormProps = {

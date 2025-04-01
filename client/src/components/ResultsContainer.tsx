@@ -22,18 +22,28 @@ export default function ResultsContainer({ isVisible, results }: ResultsContaine
 
   // Function to determine the color of the health score
   const getHealthScoreColor = (score: number) => {
-    if (score >= 90) return "bg-success";
-    if (score >= 70) return "bg-success";
+    if (score >= 90) return "bg-green-500";
+    if (score >= 70) return "bg-green-400";
     if (score >= 50) return "bg-yellow-500";
-    return "bg-error";
+    if (score >= 30) return "bg-orange-500";
+    return "bg-red-500";
   };
 
   // Function to determine the health score label
   const getHealthScoreLabel = (score: number) => {
     if (score >= 90) return "Excellent";
-    if (score >= 70) return "Very Good";
-    if (score >= 50) return "Needs Improvement";
+    if (score >= 70) return "Good";
+    if (score >= 50) return "Average";
+    if (score >= 30) return "Needs Improvement";
     return "Poor";
+  };
+  
+  // Function to get badge variant based on score
+  const getScoreBadgeVariant = (score: number) => {
+    if (score >= 70) return "default";
+    if (score >= 50) return "secondary";
+    if (score >= 30) return "outline";
+    return "destructive";
   };
 
   // Function to filter tags based on active tab
@@ -144,7 +154,7 @@ export default function ResultsContainer({ isVisible, results }: ResultsContaine
           <div className="relative pt-1">
             <div className="flex mb-2 items-center justify-between">
               <div>
-                <Badge variant={analysis.healthScore >= 70 ? "default" : "destructive"}>
+                <Badge variant={getScoreBadgeVariant(analysis.healthScore)}>
                   {analysis.healthScore}%
                 </Badge>
               </div>
