@@ -8,13 +8,13 @@ Deliver features sequentially. Finish one section before starting the next. Keep
 - [ ] Add a shared request context type in `shared/` so server routes and workers use the same contract.
 
 ## 1) Authenticated Multi-Tenant Access
-- [ ] Add request context middleware to extract/validate `tenantId`/`userId` from tokens; reject missing/invalid (server/index.ts → new middleware module).
+- [x] Add request context middleware to extract/validate `tenantId`/`userId` from tokens; reject missing/invalid (server/index.ts → new middleware module).
 - [ ] Introduce a tenant-scoped repository base that always scopes queries by `tenantId` (e.g., `server/repositories/tenantRepository.ts`).
 - [ ] Add role checks (owner/member/read-only) in services before mutating audits; gate write routes in `server/routes.ts`.
 - [ ] Tests: cross-tenant access blocked; roles enforced across API handlers and repositories.
 
 ## 2) Reliable Audit Queueing
-- [ ] Standardize job payload and idempotency key `tenantId|auditType|url`; producer lives in API route, consumer in worker module.
+- [x] Standardize job payload and idempotency key `tenantId|auditType|url`; producer lives in API route, consumer in worker module.
 - [ ] Configure retries with exponential backoff, per-job timeout, and dead-letter queue; expose minimal metrics/logs for enqueue/start/success/fail.
 - [ ] Protect upstreams with timeouts/circuit-breakers when fetching sites (see `server/routes.ts`).
 - [ ] Tests: duplicate submissions blocked; retries back off; DLQ receives poison messages.
@@ -32,14 +32,14 @@ Deliver features sequentially. Finish one section before starting the next. Keep
 - [ ] Tests: summary correctness, gating, export flow; snapshot export if feasible.
 
 ## 5) Usage Limits
-- [ ] Create `usage_ledger` table and atomic helper to read/update monthly counts; wrap in transaction/lock.
-- [ ] Middleware guard rejects enqueue when quota exceeded; return remaining/limit in error body.
+- [x] Create `usage_ledger` table and atomic helper to read/update monthly counts; wrap in transaction/lock.
+- [x] Middleware guard rejects enqueue when quota exceeded; return remaining/limit in error body.
 - [ ] Scheduled job resets counts monthly and emits 80/90% warnings (log or notification hook).
 - [ ] Tests: warnings, blocking, and reset logic (unit + integration at API boundary).
 
 ## 6) Plan Gating
-- [ ] Define plan config (Free/Pro/Team) with quotas and feature flags; seed `tenant_plan` mapping.
-- [ ] Entitlements helper resolves plan → capabilities (exports, history depth, webhooks placeholder) and is reused by API/UI.
+- [x] Define plan config (Free/Pro/Team) with quotas and feature flags; seed `tenant_plan` mapping.
+- [x] Entitlements helper resolves plan → capabilities (exports, history depth, webhooks placeholder) and is reused by API/UI.
 - [ ] Apply entitlements checks in routes, services, and UI components (e.g., hide export button when not allowed).
 - [ ] Tests: Free vs. Pro behavior verified in API responses and UI rendering.
 
