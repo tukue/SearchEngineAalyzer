@@ -34,5 +34,6 @@ echo "Verifying homepage renders HTML..."
 HOME_HTML=$(curl -fsS "http://localhost:${PORT}/")
 echo "$HOME_HTML" | grep -qi "<!doctype html>"
 echo "$HOME_HTML" | grep -qi "id=\"root\""
+echo "$HOME_HTML" | grep -qv "import express" || (echo "Root response appears to contain server source" >&2 && exit 1)
 
 echo "Smoke test succeeded."

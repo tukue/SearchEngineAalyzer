@@ -7,6 +7,7 @@ import { fromZodError } from "zod-validation-error";
 import { storage } from "./storage";
 import { tenantMiddleware, type TenantScopedRequest } from "./tenant";
 import { AuditService, QuotaExceededError, auditQuerySchema } from "./auditService";
+import { FetchPageError } from "./auditEngine";
 import { JobQueue } from "./jobQueue";
 
 const auditService = new AuditService(storage);
@@ -48,10 +49,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         await storage.updateAuditRun(run.id, {
           status: "FAILED",
-          summary: "Audit failed",
+          summary: error instanceof FetchPageError ? "Network error reaching target" : "Audit failed",
           completedAt: new Date().toISOString(),
         });
         console.error("Error running audit", error);
+        if (error instanceof FetchPageError) {
+          return res.status(502).json({ message: error.message });
+        }
         return res.status(500).json({ message: "Failed to run audit" });
       }
     } catch (error) {
@@ -61,6 +65,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         const validationError = fromZodError(error);
         return res.status(400).json({ message: validationError.message || "Invalid URL format" });
+      }
+      if (error instanceof FetchPageError) {
+        return res.status(502).json({ message: error.message });
       }
       console.error("Audit error", error);
       return res.status(500).json({ message: "Failed to run audit" });

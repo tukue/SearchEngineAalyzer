@@ -1,4 +1,9 @@
-import { performFullAudit, runMetaAudit, normalizeUrl } from "./auditEngine";
+import {
+  performFullAudit,
+  runMetaAudit,
+  normalizeUrl,
+  FetchPageError,
+} from "./auditEngine";
 import { type IStorage } from "./storage";
 import { type AuditRun, type PlanFeatureFlags } from "@shared/schema";
 import { z } from "zod";
@@ -108,9 +113,15 @@ export class AuditService {
       });
     } catch (error) {
       const status = error instanceof Error && error.message === "TIMEOUT" ? "TIMED_OUT" : "FAILED";
+      const summary =
+        error instanceof FetchPageError
+          ? "Network error reaching target"
+          : status === "TIMED_OUT"
+            ? "Audit timed out"
+            : "Audit failed";
       await this.storage.updateAuditRun(job.runId, {
         status,
-        summary: status === "TIMED_OUT" ? "Audit timed out" : "Audit failed",
+        summary,
         completedAt: new Date().toISOString(),
       });
     }

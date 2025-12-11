@@ -45,6 +45,15 @@ const importantSocialTags = [
 ];
 const importantTechnicalTags = ["robots", "charset", "content-type", "language", "author", "generator"];
 
+export class FetchPageError extends Error {
+  status?: number;
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = "FetchPageError";
+    this.status = status;
+  }
+}
+
 export function normalizeUrl(rawUrl: string): string {
   if (!rawUrl.startsWith("http://") && !rawUrl.startsWith("https://")) {
     return `https://${rawUrl}`;
@@ -65,11 +74,22 @@ async function fetchPage(url: string): Promise<{ html: string; finalUrl: string;
     signal: controller.signal,
   };
 
-  const response = await fetch(url, requestOptions);
+  let response;
+  try {
+    response = await fetch(url, requestOptions);
+  } catch (error) {
+    clearTimeout(timeout);
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new FetchPageError(`Network error reaching target: ${reason}`);
+  }
+
   clearTimeout(timeout);
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch website: ${response.status} ${response.statusText}`);
+    throw new FetchPageError(
+      `Failed to fetch website: ${response.status} ${response.statusText}`,
+      response.status,
+    );
   }
 
   const html = await response.text();
