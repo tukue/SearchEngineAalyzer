@@ -10,36 +10,32 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x]
-
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Run linting
-      run: npm run lint || echo "Linting skipped"
-    
-    - name: Run structure tests
-      run: node test.js
-    
-    - name: Run API tests
-      run: node api-test.js
-    
-    - name: Run frontend tests
-      run: node frontend-check.js
-    
-    - name: Run all tests with test script
-      run: bash npm-test.sh
-    
-    - name: Build application
-      run: npm run build --if-present
+      - uses: actions/checkout@v3
+
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint || echo "Linting skipped"
+
+      - name: Run structure tests
+        run: node test.js
+
+      - name: Run API tests
+        run: node api-test.js
+
+      - name: Run frontend tests
+        run: node frontend-check.js
+
+      - name: Run all tests with test script
+        run: bash npm-test.sh
+
+      - name: Build application
+        run: npm run build --if-present
