@@ -19,7 +19,16 @@ export function registerDeploymentHomepage(app: Express) {
     return;
   }
 
-  app.get("/", (_req, res) => {
+  const serveDeployHome = (_req: any, res: any) => {
     res.sendFile(homepagePath);
-  });
+  };
+
+  // Keep the deployment-only homepage reachable without blocking the main SPA.
+  // By default, expose it under /deploy-home. It can optionally be served at
+  // the root path when explicitly requested (SERVE_DEPLOY_HOME_ROOT=true).
+  app.get("/deploy-home", serveDeployHome);
+
+  if (process.env.SERVE_DEPLOY_HOME_ROOT === "true") {
+    app.get("/", serveDeployHome);
+  }
 }

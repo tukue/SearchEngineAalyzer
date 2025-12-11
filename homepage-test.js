@@ -17,6 +17,16 @@ async function main() {
   assert.ok(!body.includes('import express'), 'Should not expose server source code');
 
   console.log('✓ Homepage returns compiled HTML');
+
+  console.log('Checking deployment homepage is reachable...');
+  const deployRes = await fetch(`${BASE_URL}/deploy-home`);
+  const deployBody = await deployRes.text();
+
+  assert.strictEqual(deployRes.status, 200, 'Expected 200 from /deploy-home');
+  assert.ok(deployBody.toLowerCase().includes('deployment check') || deployBody.includes('Deploy'),
+    'Deployment homepage should be present');
+
+  console.log('✓ Deployment homepage reachable at /deploy-home');
 }
 
 main().catch((err) => {
