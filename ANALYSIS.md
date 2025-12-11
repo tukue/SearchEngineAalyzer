@@ -2,6 +2,15 @@
 
 This document summarizes the current strengths of the Web Audit SaaS MVP and outlines recommended steps to make it scalable, secure, and commercially viable.
 
+## 0. Must-Have Features (MVP, integrate with current code)
+- **Authenticated multi-tenant access**: Keep the existing login/register flow and ensure every API call and DB query is scoped by `tenant_id`/`user_id` (start with middleware + per-request context).
+- **Run + queue audits**: Use the current audit trigger UI/API but back it with a queued job (existing worker/`server` queue) with idempotent job keys, retries, and timeouts to avoid duplicate runs.
+- **Result persistence + history**: Persist summaries in the current database tables; store raw artifacts in object storage if large. Surface a “Recent runs” list (last 5) in the existing dashboard component.
+- **Actionable reports**: Reuse the present results view to show a health score, pass/fail counts, and the top 3–5 prioritized fixes with impact/effort hints; add PDF/HTML export behind a feature flag if already partially implemented.
+- **Usage limits**: Add a simple monthly counter per tenant (DB table + middleware) and display remaining quota in the dashboard. Block new jobs gracefully when exceeded.
+- **Basic plans**: Hard-code plan flags (Free/Pro) in config or DB seed; gate exports/history length/webhooks with those flags while Stripe/Paddle is being wired.
+- **Operational hygiene**: CI runs lint/tests; migrations are applied before deploy; env secrets loaded via existing `.env` mechanism; add minimal audit logging for auth and audit submissions.
+
 ## 1. Evaluation of Current MVP
 - **Strengths**: Functional end-to-end audit flow; actionable results; fast time-to-value.
 - **Gaps**: Limited reliability/scalability for job handling; insufficient tenant isolation and data governance; UX polish needed for onboarding and reporting; monetization controls absent.
