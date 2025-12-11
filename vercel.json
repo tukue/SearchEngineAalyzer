@@ -9,15 +9,19 @@
       "src": "api/index.ts",
       "use": "@vercel/node@3.0.0",
       "config": {
-        "includeFiles": ["dist/server/**"],
-        "nodeVersion": "20.x"
+        "includeFiles": ["dist/server/**"]
       }
     },
     {
       "src": "dist/client/**/*",
-      "use": "@vercel/static"
+      "use": "@vercel/static@1.0.0"
     }
   ],
+  "functions": {
+    "api/index.ts": {
+      "runtime": "nodejs20.x"
+    }
+  },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index.ts" },
     { "src": "/deploy-home", "dest": "/dist/client/deploy-home.html" },
