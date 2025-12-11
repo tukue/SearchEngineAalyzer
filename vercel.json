@@ -5,11 +5,6 @@
   "outputDirectory": "dist/client",
   "cleanUrls": true,
   "trailingSlash": false,
-  "functions": {
-    "api/**": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
     { "src": "/deploy-home", "dest": "/deploy-home.html" },
