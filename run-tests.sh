@@ -57,6 +57,15 @@ if [ $? -ne 0 ]; then
 fi
 
 echo -e "\n\n========================================================"
+echo "Running integration tests..."
+echo "========================================================"
+node integration-test.js
+if [ $? -ne 0 ]; then
+  echo "Integration tests failed!"
+  exit 1
+fi
+
+echo -e "\n\n========================================================"
 echo "Running frontend integration tests..."
 echo "========================================================"
 node frontend-check.js
