@@ -15,8 +15,8 @@ trap cleanup EXIT
 
 start_server() {
   if nc -z localhost 5000 2>/dev/null; then
-    echo "Application already running on port 5000."
-    return 0
+    pkill -f "dist/server/index.js" 2>/dev/null || true
+    sleep 1
   fi
 
   echo "Starting production server for API/E2E tests..."

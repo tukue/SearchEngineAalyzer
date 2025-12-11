@@ -71,11 +71,12 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  // In production we serve the Vite build artifacts generated in dist/
-  // (see vite.config.ts). Keeping the bundle in a single directory ensures
-  // platforms like Vercel pick up the compiled index.html rather than the
-  // Node bundle when deploying statically.
-  const distPath = path.resolve(__dirname, "..", "dist");
+  // In production we serve the Vite build artifacts generated in dist/client
+  // (see vite.config.ts). Keeping client assets isolated ensures platforms like
+  // Vercel pick up the compiled index.html rather than any server bundle.
+  // When bundled, this file lives in dist/server, so we walk up one directory
+  // to reach dist/client where Vite emits the compiled SPA assets.
+  const distPath = path.resolve(__dirname, "..", "client");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(

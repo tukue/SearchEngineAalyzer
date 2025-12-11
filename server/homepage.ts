@@ -9,8 +9,11 @@ const __dirname = path.dirname(__filename);
 export function registerDeploymentHomepage(app: Express) {
   const rootDir = path.resolve(__dirname, "..");
   const candidates = [
+    // Development (served from repo root)
     path.resolve(rootDir, "public", "deploy-home.html"),
     path.resolve(rootDir, "server", "public", "deploy-home.html"),
+    // Production (bundled server lives in dist/server, client assets in dist/client)
+    path.resolve(rootDir, "client", "deploy-home.html"),
   ];
 
   const homepagePath = candidates.find((candidate) => fs.existsSync(candidate));

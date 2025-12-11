@@ -30,12 +30,12 @@ export default defineConfig({
     },
   },
   root: path.resolve(__dirname, "client"),
+  publicDir: path.resolve(__dirname, "public"),
   build: {
-    // Keep the production bundle at dist/ so that platforms like Vercel
-    // (which default to a single output directory) serve the compiled client
-    // index.html instead of the bundled server source. The Express server
-    // and smoke tests both read from this location.
-    outDir: path.resolve(__dirname, "dist"),
+    // Keep client assets isolated from the server bundle so static hosts (e.g.
+    // Vercel) never expose server sources. The Express server will serve from
+    // dist/client while the server bundle lives in dist/server.
+    outDir: path.resolve(__dirname, "dist", "client"),
     emptyOutDir: true,
   },
 });
