@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { HistoryIcon, RefreshCw, ExternalLink } from "lucide-react";
+import { HistoryIcon, RefreshCw, ExternalLink, Sparkles, ShieldCheck, Clock } from "lucide-react";
 import URLInputForm from "@/components/URLInputForm";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
@@ -115,70 +115,113 @@ export default function Home() {
 
   return (
     <>
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Header */}
-        <header className="mb-8 flex flex-col md:flex-row justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-800 mb-2">Meta Tag Analyzer</h1>
-            <p className="text-slate-600">Analyze and validate meta tags from any website</p>
-          </div>
-          
-          <div className="mt-4 md:mt-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9">
-                  <HistoryIcon className="h-4 w-4 mr-2" />
-                  Search History
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[280px]">
-                <DropdownMenuLabel>Recent Analyses</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                
-                {searchHistory.length === 0 ? (
-                  <div className="px-2 py-4 text-center text-sm text-slate-500">
-                    No search history yet
+      <div className="bg-gradient-to-b from-slate-50 via-white to-slate-50">
+        <div className="container mx-auto px-4 pt-10 pb-6 max-w-6xl">
+          {/* Hero */}
+          <div className="grid lg:grid-cols-[1.1fr,0.9fr] gap-8 items-start mb-10">
+            <div className="space-y-5">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white shadow-sm border border-slate-200 px-3 py-1 text-sm text-slate-600">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Start your web audit in one step
+              </div>
+              <div className="space-y-3">
+                <h1 className="text-4xl md:text-5xl font-bold text-slate-900 leading-tight">
+                  Enter a website, get an actionable audit in seconds.
+                </h1>
+                <p className="text-lg text-slate-600 max-w-2xl">
+                  Paste any URL to see SEO, social, and technical meta tag coverage with prioritized fixes.
+                </p>
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div className="rounded-xl bg-white border border-slate-200 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                    Tenant Safe
                   </div>
-                ) : (
-                  <>
-                    {searchHistory.map((item, i) => (
-                      <DropdownMenuItem key={i} onClick={() => handleHistoryItemClick(item.url)}>
-                        <div className="flex flex-col w-full">
-                          <div className="flex items-center justify-between w-full">
-                            <span className="text-sm font-medium truncate max-w-[180px]">{item.url}</span>
-                            <ExternalLink className="h-3 w-3 text-slate-400" />
-                          </div>
-                          <span className="text-xs text-slate-500">{formatDate(item.timestamp)}</span>
-                        </div>
-                      </DropdownMenuItem>
-                    ))}
-                    
+                  <p className="text-sm text-slate-600 mt-1">Scoped audits keep your data isolated per workspace.</p>
+                </div>
+                <div className="rounded-xl bg-white border border-slate-200 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <Clock className="h-4 w-4 text-amber-500" />
+                    Queue Backed
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1">Jobs run async with retries so results stay reliable.</p>
+                </div>
+                <div className="rounded-xl bg-white border border-slate-200 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <HistoryIcon className="h-4 w-4 text-indigo-500" />
+                    Remembered
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1">Recent URLs stay in your history for quick re-runs.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-lg shadow-slate-200/50 p-6">
+              <header className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Step 1</p>
+                  <h2 className="text-xl font-semibold text-slate-900">Enter a website to audit</h2>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9">
+                      <HistoryIcon className="h-4 w-4 mr-2" />
+                      History
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-[280px]">
+                    <DropdownMenuLabel>Recent Analyses</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleClearHistory}>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      <span>Clear History</span>
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+
+                    {searchHistory.length === 0 ? (
+                      <div className="px-2 py-4 text-center text-sm text-slate-500">
+                        No search history yet
+                      </div>
+                    ) : (
+                      <>
+                        {searchHistory.map((item, i) => (
+                          <DropdownMenuItem key={i} onClick={() => handleHistoryItemClick(item.url)}>
+                            <div className="flex flex-col w-full">
+                              <div className="flex items-center justify-between w-full">
+                                <span className="text-sm font-medium truncate max-w-[180px]">{item.url}</span>
+                                <ExternalLink className="h-3 w-3 text-slate-400" />
+                              </div>
+                              <span className="text-xs text-slate-500">{formatDate(item.timestamp)}</span>
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleClearHistory}>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          <span>Clear History</span>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </header>
+
+              <div className="space-y-4">
+                <URLInputForm onSubmit={handleSubmit} isLoading={isPending} />
+                <p className="text-sm text-slate-500">
+                  We run your audit in the background, capture meta tags, and return prioritized fixes for SEO, social, and technical health.
+                </p>
+              </div>
+            </div>
           </div>
-        </header>
 
-        {/* URL Input Form */}
-        <URLInputForm onSubmit={handleSubmit} isLoading={isPending} />
-
-        {/* Loading State */}
-        <LoadingState isVisible={isPending} />
-
-        {/* Error State */}
-        <ErrorState isVisible={isError} errorMessage={errorMessage} onRetry={handleRetry} />
-
-        {/* Results Container */}
-        <ResultsContainer isVisible={showResults} results={analysisResults} />
-
-        {/* Getting Started (Shown when no analysis has been run) */}
-        {!isPending && !isError && !showResults && <GettingStarted />}
+          {/* Results + States */}
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Latest audit</h3>
+            <LoadingState isVisible={isPending} />
+            <ErrorState isVisible={isError} errorMessage={errorMessage} onRetry={handleRetry} />
+            <ResultsContainer isVisible={showResults} results={analysisResults} />
+            {!isPending && !isError && !showResults && <GettingStarted />}
+          </div>
+        </div>
       </div>
 
       {/* Footer */}

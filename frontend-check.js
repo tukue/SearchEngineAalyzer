@@ -52,6 +52,13 @@ try {
   } else {
     console.log('✓ Home component includes URLInputForm component');
   }
+
+  if (!homeContent.includes('Enter a website to audit') || !homeContent.includes('Start your web audit in one step')) {
+    console.error('✗ Homepage is missing the landing hero copy for starting an audit');
+    process.exit(1);
+  } else {
+    console.log('✓ Homepage includes hero copy guiding users to start an audit');
+  }
   
   // Check for results container
   if (!homeContent.includes('ResultsContainer')) {
