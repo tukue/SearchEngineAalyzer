@@ -19,8 +19,8 @@ start_server() {
     return 0
   fi
 
-  echo "Starting dev server for API/E2E tests..."
-  npm run dev >/tmp/devserver.log 2>&1 &
+  echo "Starting production server for API/E2E tests..."
+  npm run start >/tmp/devserver.log 2>&1 &
   SERVER_PID=$!
 
   for i in {1..30}; do
@@ -45,7 +45,25 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+echo -e "\n\n========================================================"
+echo "Building production assets..."
+echo "========================================================"
+npm run build
+if [ $? -ne 0 ]; then
+  echo "Build failed!"
+  exit 1
+fi
+
 start_server
+
+echo -e "\n\n========================================================"
+echo "Running homepage rendering test..."
+echo "========================================================"
+node homepage-test.js
+if [ $? -ne 0 ]; then
+  echo "Homepage test failed!"
+  exit 1
+fi
 
 echo -e "\n\n========================================================"
 echo "Running API tests..."
