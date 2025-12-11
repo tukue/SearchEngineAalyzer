@@ -8,10 +8,36 @@
 
 import fetch from 'node-fetch';
 import assert from 'assert';
+import http from 'http';
+
+// Local fixture site so E2E tests are self-contained
+const fixtureHtml = `<!doctype html>
+<html lang="en">
+  <head>
+    <title>Fixture Page</title>
+    <meta name="description" content="A local test page" />
+    <meta property="og:title" content="Fixture OG Title" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <link rel="canonical" href="https://example.com/fixture" />
+  </head>
+  <body><h1>Hello Fixture</h1></body>
+</html>`;
+
+function startFixtureServer(port = 5555) {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(fixtureHtml);
+    });
+
+    server.on('error', reject);
+    server.listen(port, '0.0.0.0', () => resolve(server));
+  });
+}
 
 // Configuration
 const API_URL = process.env.API_URL || 'http://localhost:5000';
-const TEST_URL = 'https://example.com';
+const TEST_URL = 'http://localhost:5555/fixture';
 
 // Colors for console output
 const colors = {
@@ -28,9 +54,13 @@ const colors = {
 async function runTests() {
   console.log(`${colors.cyan}===== Meta Tag Analyzer E2E Tests =====${colors.reset}`);
   console.log(`Testing against API: ${API_URL}\n`);
-  
+
   let passedTests = 0;
   let failedTests = 0;
+  let fixtureServer;
+
+  try {
+    fixtureServer = await startFixtureServer();
   
   // Test 1: API Health Check
   try {
@@ -118,18 +148,23 @@ async function runTests() {
     failedTests++;
   }
   
-  // Test Summary
-  console.log(`\n${colors.cyan}===== Test Summary =====${colors.reset}`);
-  console.log(`Passed: ${colors.green}${passedTests}${colors.reset}`);
-  console.log(`Failed: ${colors.red}${failedTests}${colors.reset}`);
-  console.log(`Total: ${passedTests + failedTests}`);
-  
-  if (failedTests > 0) {
-    console.log(`\n${colors.red}✗ Some tests failed!${colors.reset}`);
-    process.exit(1);
-  } else {
-    console.log(`\n${colors.green}✓ All tests passed!${colors.reset}`);
-    process.exit(0);
+    // Test Summary
+    console.log(`\n${colors.cyan}===== Test Summary =====${colors.reset}`);
+    console.log(`Passed: ${colors.green}${passedTests}${colors.reset}`);
+    console.log(`Failed: ${colors.red}${failedTests}${colors.reset}`);
+    console.log(`Total: ${passedTests + failedTests}`);
+
+    if (failedTests > 0) {
+      console.log(`\n${colors.red}✗ Some tests failed!${colors.reset}`);
+      process.exit(1);
+    } else {
+      console.log(`\n${colors.green}✓ All tests passed!${colors.reset}`);
+      process.exit(0);
+    }
+  } finally {
+    if (fixtureServer) {
+      fixtureServer.close();
+    }
   }
 }
 

@@ -1,16 +1,46 @@
 // API test script to validate the API functionality
 
 import fetch from 'node-fetch';
+import http from 'http';
+
+// Spin up a tiny local site so tests don't depend on external networking
+const fixtureHtml = `<!doctype html>
+<html lang="en">
+  <head>
+    <title>Fixture Page</title>
+    <meta name="description" content="A local test page" />
+    <meta property="og:title" content="Fixture OG Title" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <link rel="canonical" href="https://example.com/fixture" />
+  </head>
+  <body><h1>Hello Fixture</h1></body>
+</html>`;
+
+function startFixtureServer(port = 5555) {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(fixtureHtml);
+    });
+
+    server.on('error', reject);
+    server.listen(port, '0.0.0.0', () => resolve(server));
+  });
+}
 
 // Test URL to analyze
-const testUrl = 'https://example.com';
+const testUrl = 'http://localhost:5555/fixture';
 const apiUrl = 'http://localhost:5000/api/analyze';
 
 async function testApi() {
   console.log('Testing Meta Tag Analyzer API...');
   console.log(`Testing URL: ${testUrl}`);
-  
+
+  let fixtureServer;
+
   try {
+    fixtureServer = await startFixtureServer();
+
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -18,7 +48,7 @@ async function testApi() {
       },
       body: JSON.stringify({ url: testUrl }),
     });
-    
+
     if (!response.ok) {
       console.error(`API returned error: ${response.status} ${response.statusText}`);
       const errorText = await response.text();
@@ -93,6 +123,10 @@ async function testApi() {
   } catch (error) {
     console.error('Error testing API:', error);
     return false;
+  } finally {
+    if (fixtureServer) {
+      fixtureServer.close();
+    }
   }
 }
 
