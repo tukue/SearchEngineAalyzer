@@ -71,11 +71,15 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "public");
+  // In production we serve the Vite build artifacts generated in dist/public
+  // (see vite.config.ts). The previous path pointed to server/public which does
+  // not exist in this project and resulted in raw source being rendered
+  // instead of the compiled client. Keep the path explicit and validated.
+  const distPath = path.resolve(__dirname, "..", "dist", "public");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
+      `Could not find the build directory: ${distPath}. Run \"npm run build\" before starting in production.`,
     );
   }
 
