@@ -194,6 +194,9 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Smoke test production server (localhost)
+        run: npm run smoke:server
+
   agentic-review:
     name: Agentic pre-deployment review
     runs-on: ubuntu-latest

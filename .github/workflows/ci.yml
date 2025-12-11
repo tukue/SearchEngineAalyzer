@@ -30,3 +30,6 @@ jobs:
 
       - name: Build application
         run: npm run build --if-present
+
+      - name: Smoke test production server (localhost)
+        run: npm run smoke:server
