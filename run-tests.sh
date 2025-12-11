@@ -2,6 +2,40 @@
 
 # Run all test scripts
 
+SERVER_PID=""
+
+cleanup() {
+  if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
+    kill "$SERVER_PID" 2>/dev/null || true
+    wait "$SERVER_PID" 2>/dev/null || true
+  fi
+}
+
+trap cleanup EXIT
+
+start_server() {
+  if nc -z localhost 5000 2>/dev/null; then
+    echo "Application already running on port 5000."
+    return 0
+  fi
+
+  echo "Starting dev server for API/E2E tests..."
+  npm run dev >/tmp/devserver.log 2>&1 &
+  SERVER_PID=$!
+
+  for i in {1..30}; do
+    if nc -z localhost 5000 2>/dev/null; then
+      echo "Server is up on port 5000."
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "Server failed to start within timeout. Last 20 log lines:" >&2
+  tail -n 20 /tmp/devserver.log >&2 || true
+  exit 1
+}
+
 echo "========================================================"
 echo "Running structure tests..."
 echo "========================================================"
@@ -10,6 +44,8 @@ if [ $? -ne 0 ]; then
   echo "Structure tests failed!"
   exit 1
 fi
+
+start_server
 
 echo -e "\n\n========================================================"
 echo "Running API tests..."
@@ -32,17 +68,10 @@ fi
 echo -e "\n\n========================================================"
 echo "Running end-to-end tests..."
 echo "========================================================"
-# Check if application is running on port 5000
-if nc -z localhost 5000 2>/dev/null; then
-  echo "Application is running on port 5000. Running e2e tests..."
-  node e2e-test.js
-  if [ $? -ne 0 ]; then
-    echo "❌ End-to-end tests failed!"
-    exit 1
-  fi
-else
-  echo "⚠️ Application is not running on port 5000. Skipping e2e tests."
-  echo "To run e2e tests, make sure the application is running with 'npm run dev'"
+node e2e-test.js
+if [ $? -ne 0 ]; then
+  echo "❌ End-to-end tests failed!"
+  exit 1
 fi
 
 echo -e "\n\n========================================================"
