@@ -3,6 +3,11 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "dist/client",
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "nodejs20.x"
+    }
+  },
   "cleanUrls": true,
   "trailingSlash": false,
   "routes": [
