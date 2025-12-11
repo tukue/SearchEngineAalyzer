@@ -2,26 +2,19 @@
   "version": 2,
   "framework": null,
   "buildCommand": "npm run build",
+  "outputDirectory": "dist/client",
   "cleanUrls": true,
   "trailingSlash": false,
-  "builds": [
-    {
-      "src": "api/index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["dist/server/**"]
-      }
-    },
-    {
-      "src": "dist/client/**/*",
-      "use": "@vercel/static"
+  "functions": {
+    "api/**": {
+      "runtime": "nodejs20.x"
     }
-  ],
+  },
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.ts" },
-    { "src": "/deploy-home", "dest": "/dist/client/deploy-home.html" },
-    { "src": "/(.*)", "dest": "/dist/client/$1" },
-    { "src": "/.*", "dest": "/dist/client/index.html" },
-    { "src": "/", "dest": "/dist/client/index.html" }
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/deploy-home", "dest": "/deploy-home.html" },
+    { "src": "/(.*)", "dest": "/$1" },
+    { "src": "/.*", "dest": "/index.html" },
+    { "src": "/", "dest": "/index.html" }
   ]
 }
