@@ -38,3 +38,13 @@ This document summarizes the current strengths of the Web Audit SaaS MVP and out
 - **Phase 2 – Differentiation**: Trend charts, project comparisons, webhooks/CI triggers, improved impact/effort scoring, object storage for raw artifacts, stricter isolation (e.g., RLS).
 - **Phase 3 – Advanced**: AI insights for fix tickets, deeper CI/CD checks, alerts on regressions, org SSO/SCIM, audit trails, multi-region workers with autoscaling and SLOs.
 
+## 7. CI/CD Pipeline for Easy Deployment
+- **Source control & quality gates**: Protect `main` with mandatory PR reviews; run unit tests, linting, and type checks on every PR using GitHub Actions (or your preferred CI). Block merges on failures.
+- **Build & artifact steps**: Build frontend assets and container images for frontend/backend; tag images with commit SHA and `latest` per environment. Cache dependencies to speed up builds.
+- **Environment matrices**: Separate pipelines for `staging` and `production` triggered by branch or tag conventions (e.g., `main` → staging, `v*` tags → production).
+- **Database migrations**: Run migrations as a pre-deploy step with rollback strategy (e.g., `drizzle-kit migrate`). Require migrations to be idempotent and backward compatible.
+- **Deploy automation**: Use IaC (Docker Compose/Kubernetes/managed PaaS) with zero-downtime rollout (blue/green or rolling). Promote the same artifact from staging to production after smoke tests.
+- **Secrets & config**: Inject secrets via CI-managed variables (e.g., GitHub Secrets). Never bake secrets into images. Use per-environment configuration files and feature flags.
+- **Tests after deploy**: Run smoke/end-to-end checks against staging and post-deploy health checks in production. Roll back automatically on failures.
+- **Observability hooks**: Publish build metadata, deploy version, and changelog to your monitoring/logging stack. Alert on failed deploys or elevated error rates immediately after release.
+
