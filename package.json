@@ -10,6 +10,7 @@
     "start": "NODE_ENV=production node dist/server/index.js",
     "audit:url": "node scripts/run-audit.js",
     "smoke:server": "bash scripts/server-smoke.sh",
+    "test:local": "bash run-tests.sh",
     "check": "tsc",
     "db:push": "drizzle-kit push"
   },

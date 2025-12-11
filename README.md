@@ -9,7 +9,6 @@ Meta Tag Analyzer is a web application that analyzes and validates meta tags fro
 - **Search History**: View and manage your recent analyses.
 - **Responsive Design**: Works seamlessly on both desktop and mobile devices.
 
-
 ## Getting Started
 
 ### Prerequisites
@@ -24,3 +23,18 @@ Meta Tag Analyzer is a web application that analyzes and validates meta tags fro
    ```bash
    git clone https://github.com/tukue/SearchEngineAalyzer.git
    cd SearchEngineAalyzer
+   ```
+
+2. Install dependencies (Node.js 20+ recommended):
+
+   ```bash
+   npm ci
+   ```
+
+3. Run the full local test suite (builds the app, starts the production server locally, and exercises the APIs/UI):
+
+   ```bash
+   npm run test:local
+   ```
+
+This workflow runs entirely on localhost and does not depend on Vercel or external deployment hooks.
