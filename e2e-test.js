@@ -39,6 +39,18 @@ function startFixtureServer(port = 5555) {
 const API_URL = process.env.API_URL || 'http://localhost:5000';
 const TEST_URL = 'http://localhost:5555/fixture';
 
+async function pollRun(runId, attempts = 20) {
+  for (let i = 0; i < attempts; i++) {
+    const response = await fetch(`${API_URL}/api/audits/${runId}`);
+    const data = await response.json();
+    if (data.run && ["SUCCEEDED", "FAILED", "TIMED_OUT"].includes(data.run.status)) {
+      return data;
+    }
+    await new Promise(res => setTimeout(res, 500));
+  }
+  throw new Error('Timed out waiting for audit completion');
+}
+
 // Colors for console output
 const colors = {
   reset: '\x1b[0m',
@@ -92,25 +104,26 @@ async function runTests() {
       },
       body: JSON.stringify({ url: TEST_URL }),
     });
-    
+
     if (response.ok) {
-      const data = await response.json();
-      
+      const queued = await response.json();
+      const data = await pollRun(queued.runId);
+
       // Validate response structure
       assert(data.analysis, 'Response should include analysis data');
-      assert(data.tags && Array.isArray(data.tags), 'Response should include tags array');
-      assert(data.recommendations && Array.isArray(data.recommendations), 'Response should include recommendations array');
-      
+      assert(data.analysis.tags && Array.isArray(data.analysis.tags), 'Response should include tags array');
+      assert(data.analysis.recommendations && Array.isArray(data.analysis.recommendations), 'Response should include recommendations array');
+
       // Validate analysis data
-      assert(typeof data.analysis.healthScore === 'number', 'Health score should be a number');
-      assert(typeof data.analysis.totalCount === 'number', 'Total count should be a number');
-      
+      assert(typeof data.analysis.analysis.healthScore === 'number', 'Health score should be a number');
+      assert(typeof data.analysis.analysis.totalCount === 'number', 'Total count should be a number');
+
       console.log(`${colors.green}✓ URL analysis passed${colors.reset}`);
-      console.log(`  Health Score: ${data.analysis.healthScore}%`);
-      console.log(`  Total Tags: ${data.analysis.totalCount}`);
-      console.log(`  Found Tags: ${data.tags.filter(tag => tag.isPresent).length}`);
-      console.log(`  Missing Tags: ${data.tags.filter(tag => !tag.isPresent).length}`);
-      console.log(`  Recommendations: ${data.recommendations.length}`);
+      console.log(`  Health Score: ${data.analysis.analysis.healthScore}%`);
+      console.log(`  Total Tags: ${data.analysis.analysis.totalCount}`);
+      console.log(`  Found Tags: ${data.analysis.tags.filter(tag => tag.isPresent).length}`);
+      console.log(`  Missing Tags: ${data.analysis.tags.filter(tag => !tag.isPresent).length}`);
+      console.log(`  Recommendations: ${data.analysis.recommendations.length}`);
       passedTests++;
     } else {
       const errorData = await response.json();
