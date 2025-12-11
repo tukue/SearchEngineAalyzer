@@ -1,6 +1,6 @@
-import fetch, { Headers } from "node-fetch";
+import fetch, { Headers, RequestInit } from "node-fetch";
 import * as cheerio from "cheerio";
-import { type AnalysisResult } from "@shared/schema";
+import { type AnalysisResult, type MetaTag, type Recommendation } from "@shared/schema";
 
 export type AuditScores = {
   seo: number;
@@ -52,12 +52,21 @@ export function normalizeUrl(rawUrl: string): string {
   return rawUrl;
 }
 
+const FETCH_TIMEOUT_MS = 10000;
+
 async function fetchPage(url: string): Promise<{ html: string; finalUrl: string; headers: Headers }> {
-  const response = await fetch(url, {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  const requestOptions: RequestInit = {
     headers: {
       "User-Agent": "Mozilla/5.0 (compatible; WebAudit/1.0)",
     },
-  });
+    signal: controller.signal,
+  };
+
+  const response = await fetch(url, requestOptions);
+  clearTimeout(timeout);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch website: ${response.status} ${response.statusText}`);
@@ -73,6 +82,9 @@ function clampScore(value: number): number {
   return Math.round(value);
 }
 
+type ParsedMetaTag = Omit<MetaTag, "id"> & { isPresent: boolean };
+type ParsedRecommendation = Omit<Recommendation, "id" | "analysisId">;
+
 function analyzeMetaTags(url: string, html: string): AnalysisResult {
   const $ = cheerio.load(html);
   let seoCount = 0;
@@ -80,7 +92,7 @@ function analyzeMetaTags(url: string, html: string): AnalysisResult {
   let technicalCount = 0;
   let missingCount = 0;
 
-  const foundMetaTags: any[] = [];
+  const foundMetaTags: ParsedMetaTag[] = [];
 
   const titleTag = $("title").first().text();
   if (titleTag) {
@@ -154,7 +166,7 @@ function analyzeMetaTags(url: string, html: string): AnalysisResult {
     });
   });
 
-  const recommendations: any[] = [];
+  const recommendations: ParsedRecommendation[] = [];
   const tagExists = (tagName: string) =>
     foundMetaTags.some(
       (tag) => tag.name === tagName || tag.property === tagName || (tag.name === "title" && tagName === "title"),
