@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import { storage } from '../server/storage';
 import { urlSchema } from '../shared/schema';
+import { calculateMVPMeasurements } from '../server/measurementEngine';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import fetch from 'node-fetch';
@@ -328,8 +329,14 @@ app.post('/api/analyze', async (req, res) => {
       recommendations
     };
     
-    // Store the results
-    const storedAnalysis = await storage.createAnalysis(analysisResult);
+    // Calculate MVP measurements
+    const mvpMeasurements = calculateMVPMeasurements(html, analysisResult);
+    
+    // Store the results with MVP measurements
+    const storedAnalysis = await storage.createAnalysis({
+      ...analysisResult,
+      mvpMeasurements
+    });
     
     res.json(storedAnalysis);
   } catch (error) {

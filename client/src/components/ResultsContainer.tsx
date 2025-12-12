@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnalysisResult } from "@shared/schema";
 import TagsTable from "./TagsTable";
 import RecommendationsList from "./RecommendationsList";
+import MVPMeasurements from "./MVPMeasurements";
 
 type ResultsContainerProps = {
   isVisible: boolean;
@@ -216,6 +217,9 @@ export default function ResultsContainer({ isVisible, results }: ResultsContaine
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* MVP Measurements Section */}
+      <MVPMeasurements analysis={analysis} />
 
       {/* Recommendations Section */}
       {recommendations.length > 0 && (

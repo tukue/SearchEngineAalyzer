@@ -10,7 +10,7 @@ import { Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, ExternalLink } fro
 interface AuditRun {
   id: number;
   target: string;
-  status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED";
+  status: "QUEUED" | "RUNNING" | "COMPLETED" | "SUCCEEDED" | "FAILED";
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
@@ -39,9 +39,9 @@ export default function AuditStatusTracker({ runId, onComplete }: AuditStatusTra
 
   // Stop polling when audit is complete
   useEffect(() => {
-    if (run?.run && ["COMPLETED", "FAILED"].includes(run.run.status)) {
+    if (run?.run && ["COMPLETED", "SUCCEEDED", "FAILED"].includes(run.run.status)) {
       setPollingEnabled(false);
-      if (run.run.status === "COMPLETED" && onComplete) {
+      if ((run.run.status === "COMPLETED" || run.run.status === "SUCCEEDED") && onComplete) {
         onComplete(run.run.id);
       }
     }
@@ -97,6 +97,7 @@ export default function AuditStatusTracker({ runId, onComplete }: AuditStatusTra
       case "RUNNING":
         return <RefreshCw className="h-5 w-5 text-blue-500 animate-spin" />;
       case "COMPLETED":
+      case "SUCCEEDED":
         return <CheckCircle className="h-5 w-5 text-green-500" />;
       case "FAILED":
         return <XCircle className="h-5 w-5 text-red-500" />;
@@ -112,6 +113,7 @@ export default function AuditStatusTracker({ runId, onComplete }: AuditStatusTra
       case "RUNNING":
         return "default";
       case "COMPLETED":
+      case "SUCCEEDED":
         return "default";
       case "FAILED":
         return "destructive";
@@ -127,6 +129,7 @@ export default function AuditStatusTracker({ runId, onComplete }: AuditStatusTra
       case "RUNNING":
         return auditRun.progress || 18;
       case "COMPLETED":
+      case "SUCCEEDED":
         return 100;
       case "FAILED":
         return 0;
@@ -222,7 +225,7 @@ export default function AuditStatusTracker({ runId, onComplete }: AuditStatusTra
             Refresh
           </Button>
           
-          {auditRun.status === "COMPLETED" && (
+          {(auditRun.status === "COMPLETED" || auditRun.status === "SUCCEEDED") && (
             <Button
               size="sm"
               onClick={() => window.location.href = `/audit/${auditRun.id}`}

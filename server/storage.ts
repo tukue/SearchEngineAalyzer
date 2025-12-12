@@ -57,15 +57,18 @@ export class MemStorage implements IStorage {
     this.usage = new Map();
   }
 
-  async createAnalysis(analysisData: AnalysisResult): Promise<AnalysisResult> {
+  async createAnalysis(analysisData: AnalysisResult & { mvpMeasurements?: any }): Promise<AnalysisResult> {
     const analysisId = analysisData.analysis.id && analysisData.analysis.id > 0
       ? analysisData.analysis.id
       : this.currentAnalysisId++;
 
-    // Store the analysis
+    // Store the analysis with MVP measurements
     const analysis: Analysis = {
       ...analysisData.analysis,
-      id: analysisId
+      id: analysisId,
+      seoVisibleAtFirstByte: analysisData.mvpMeasurements?.seoVisibleAtFirstByte || null,
+      prioritizedHealthScore: analysisData.mvpMeasurements?.prioritizedHealthScore || null,
+      sharePreviewConfidence: analysisData.mvpMeasurements?.sharePreviewConfidence || null,
     };
     
     this.analyses.set(analysisId, analysis);
@@ -290,11 +293,11 @@ export class MemStorage implements IStorage {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     const totalRuns = runs.length;
-    const successfulRuns = runs.filter(r => r.status === "COMPLETED").length;
+    const successfulRuns = runs.filter(r => r.status === "COMPLETED" || r.status === "SUCCEEDED").length;
     const failedRuns = runs.filter(r => r.status === "FAILED").length;
 
     // Calculate average score from completed runs with analysis data
-    const completedRuns = runs.filter(r => r.status === "COMPLETED");
+    const completedRuns = runs.filter(r => r.status === "COMPLETED" || r.status === "SUCCEEDED");
     let totalScore = 0;
     let scoredRuns = 0;
 

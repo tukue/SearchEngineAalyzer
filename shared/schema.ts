@@ -5,6 +5,7 @@ import { z } from "zod";
 export const auditStatuses = [
   "QUEUED",
   "RUNNING",
+  "COMPLETED",
   "SUCCEEDED",
   "FAILED",
   "TIMED_OUT",
@@ -37,6 +38,10 @@ export const analyses = pgTable("analyses", {
   missingCount: integer("missing_count").notNull(),
   healthScore: integer("health_score").notNull(),
   timestamp: text("timestamp").notNull(),
+  // MVP measurements
+  seoVisibleAtFirstByte: integer("seo_visible_at_first_byte"),
+  prioritizedHealthScore: integer("prioritized_health_score"),
+  sharePreviewConfidence: integer("share_preview_confidence"),
 });
 
 export const auditRuns = pgTable("audit_runs", {

@@ -117,11 +117,12 @@ export class AuditService {
       await this.storage.createAnalysis({
         ...result,
         analysis: { ...result.analysis, id: job.runId },
+        mvpMeasurements: result.mvpMeasurements,
       });
       
       // Complete
       await this.storage.updateAuditRun(job.runId, {
-        status: "SUCCEEDED",
+        status: "COMPLETED",
         healthScore: result.analysis.healthScore,
         summary,
         progress: 100,
@@ -153,12 +154,13 @@ export class AuditService {
     await this.storage.createAnalysis({
       ...audit.meta,
       analysis: { ...audit.meta.analysis, id: run.id, healthScore: combinedHealth },
+      mvpMeasurements: audit.meta.mvpMeasurements,
     });
 
     const summary = `SEO ${audit.scores.seo}, Performance ${audit.scores.performance}, Accessibility ${audit.scores.accessibility}, Security ${audit.scores.security}`;
 
     await this.storage.updateAuditRun(run.id, {
-      status: "SUCCEEDED",
+      status: "COMPLETED",
       healthScore: combinedHealth,
       summary,
       completedAt: new Date().toISOString(),

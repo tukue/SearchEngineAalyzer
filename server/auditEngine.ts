@@ -1,6 +1,7 @@
 import fetch, { Headers, RequestInit } from "node-fetch";
 import * as cheerio from "cheerio";
 import { type AnalysisResult, type MetaTag, type Recommendation } from "@shared/schema";
+import { calculateMVPMeasurements, type MVPMeasurements } from "./measurementEngine";
 
 export type AuditScores = {
   seo: number;
@@ -120,7 +121,7 @@ type ParsedRecommendation = {
   example: string;
 };
 
-function analyzeMetaTags(url: string, html: string): AnalysisResult {
+function analyzeMetaTags(url: string, html: string): AnalysisResult & { mvpMeasurements: MVPMeasurements } {
   const $ = cheerio.load(html);
   let seoCount = 0;
   let socialCount = 0;
@@ -331,7 +332,7 @@ function analyzeMetaTags(url: string, html: string): AnalysisResult {
   const healthScore = Math.round((presentImportantTags / totalImportantTags) * 100);
   const totalTags = foundMetaTags.length;
 
-  return {
+  const analysisResult: AnalysisResult = {
     analysis: {
       id: 0,
       url,
@@ -362,6 +363,14 @@ function analyzeMetaTags(url: string, html: string): AnalysisResult {
       description: rec.description,
       example: rec.example
     })),
+  };
+
+  // Calculate MVP measurements
+  const mvpMeasurements = calculateMVPMeasurements(html, analysisResult);
+
+  return {
+    ...analysisResult,
+    mvpMeasurements
   };
 }
 

@@ -1,0 +1,167 @@
+name: MVP Measurements Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'server/measurementEngine.ts'
+      - 'server/__tests__/**'
+      - 'api/index.ts'
+      - 'shared/schema.ts'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'server/measurementEngine.ts'
+      - 'server/__tests__/**'
+      - 'api/index.ts'
+      - 'shared/schema.ts'
+
+jobs:
+  mvp-validation:
+    runs-on: ubuntu-latest
+    name: Validate MVP Measurements
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate measurement engine exists
+        run: |
+          if [ ! -f "server/measurementEngine.ts" ]; then
+            echo "❌ MVP measurement engine missing"
+            exit 1
+          fi
+          echo "✅ MVP measurement engine found"
+
+      - name: Run MVP unit tests
+        run: npm run test:unit
+
+      - name: Run MVP integration tests  
+        run: npm run test:mvp
+
+      - name: Run E2E MVP tests
+        run: npm run test:e2e
+
+      - name: Build with MVP measurements
+        run: npm run build
+
+      - name: Validate deployment readiness
+        run: node validate-deployment.js
+
+      - name: Test MVP calculations
+        run: |
+          node -e "
+          import('./dist/measurementEngine.js').then(module => {
+            const { calculateMVPMeasurements } = module;
+            const mockData = {
+              analysis: { id: 1, url: 'test.com', totalCount: 5, seoCount: 3, socialCount: 1, technicalCount: 1, missingCount: 0, healthScore: 100, timestamp: new Date().toISOString() },
+              tags: [
+                { id: 1, name: 'title', content: 'Test', isPresent: true, tagType: 'SEO', url: 'test.com', property: null, httpEquiv: null, charset: null, rel: null }
+              ],
+              recommendations: []
+            };
+            const html = '<html><head><title>Test</title></head><body><h1>Test</h1></body></html>';
+            const result = calculateMVPMeasurements(html, mockData);
+            console.log('✅ MVP calculations working:', JSON.stringify(result, null, 2));
+            if (result.seoVisibleAtFirstByte >= 0 && result.prioritizedHealthScore >= 0 && result.sharePreviewConfidence >= 0) {
+              console.log('✅ All MVP measurements returning valid scores');
+            } else {
+              console.log('❌ Invalid MVP measurement scores');
+              process.exit(1);
+            }
+          }).catch(err => {
+            console.error('❌ MVP calculation test failed:', err);
+            process.exit(1);
+          });
+          "
+
+      - name: Validate API integration
+        run: |
+          if grep -q "calculateMVPMeasurements" api/index.ts; then
+            echo "✅ API integrates MVP measurements"
+          else
+            echo "❌ API missing MVP measurements integration"
+            exit 1
+          fi
+
+      - name: Check schema updates
+        run: |
+          if grep -q "seoVisibleAtFirstByte\|prioritizedHealthScore\|sharePreviewConfidence" shared/schema.ts; then
+            echo "✅ Schema includes MVP measurement fields"
+          else
+            echo "❌ Schema missing MVP measurement fields"
+            exit 1
+          fi
+
+  performance-check:
+    runs-on: ubuntu-latest
+    name: MVP Performance Validation
+    needs: mvp-validation
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Performance benchmark
+        run: |
+          node -e "
+          import('./dist/measurementEngine.js').then(module => {
+            const { calculateMVPMeasurements } = module;
+            const mockData = {
+              analysis: { id: 1, url: 'test.com', totalCount: 10, seoCount: 5, socialCount: 3, technicalCount: 2, missingCount: 2, healthScore: 80, timestamp: new Date().toISOString() },
+              tags: Array.from({length: 10}, (_, i) => ({
+                id: i + 1, name: 'test' + i, content: 'Test content', isPresent: true, tagType: 'SEO', url: 'test.com', property: null, httpEquiv: null, charset: null, rel: null
+              })),
+              recommendations: []
+            };
+            const html = '<html><head><title>Performance Test</title><meta name=\"description\" content=\"Test description\"></head><body><h1>Test</h1></body></html>';
+            
+            const iterations = 100;
+            const start = Date.now();
+            
+            for (let i = 0; i < iterations; i++) {
+              calculateMVPMeasurements(html, mockData);
+            }
+            
+            const end = Date.now();
+            const avgTime = (end - start) / iterations;
+            
+            console.log('📊 Performance Results:');
+            console.log('  Iterations:', iterations);
+            console.log('  Total time:', (end - start) + 'ms');
+            console.log('  Average per calculation:', avgTime.toFixed(2) + 'ms');
+            
+            if (avgTime < 50) {
+              console.log('✅ Performance acceptable (< 50ms per calculation)');
+            } else {
+              console.log('⚠️ Performance warning (> 50ms per calculation)');
+            }
+            
+            if (avgTime > 200) {
+              console.log('❌ Performance unacceptable (> 200ms per calculation)');
+              process.exit(1);
+            }
+          }).catch(err => {
+            console.error('❌ Performance test failed:', err);
+            process.exit(1);
+          });
+          "

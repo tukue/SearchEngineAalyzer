@@ -6,9 +6,14 @@
   <component name="ChangeListManager">
     <list default="true" id="0fb8acd3-4703-4951-a5cd-6b8ecb5f5b15" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.vercelignore" beforeDir="false" afterPath="$PROJECT_DIR$/.vercelignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/AuditStatusTracker.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/AuditStatusTracker.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/Dashboard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/Dashboard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/components/ResultsContainer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/components/ResultsContainer.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vercel.json" beforeDir="false" afterPath="$PROJECT_DIR$/vercel.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/auditEngine.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/auditEngine.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/auditService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/auditService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/storage.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/storage.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/schema.ts" beforeDir="false" afterPath="$PROJECT_DIR$/shared/schema.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
