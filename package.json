@@ -18,7 +18,7 @@
     "test:e2e": "jest server/__tests__/audit-mvp.e2e.test.ts",
     "test:all": "npm run test:unit && npm run test:mvp && npm run test:e2e",
     "validate:deployment": "node validate-deployment.js",
-    "smoke:server": "node -e \"console.log('Smoke test passed')\""
+    "smoke:server": "node -e \"console.log('Smoke test passed')\"",
     "test:local": "npm run build && npm run dev & sleep 3 && npm run test:integration && pkill -f tsx",
     "db:push": "drizzle-kit push"
   },

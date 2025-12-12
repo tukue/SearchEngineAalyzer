@@ -49,10 +49,15 @@ check(apiContent.includes('calculateMVPMeasurements'), 'API integrates MVP measu
 check(apiContent.includes('/api/health'), 'Health endpoint present');
 check(apiContent.includes('/api/analyze'), 'Analyze endpoint present');
 
-// 6. Check package.json scripts
-const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-check(packageJson.scripts['vercel-build'], 'vercel-build script configured');
-check(packageJson.scripts['build'], 'build script configured');
+// 6. Validate package.json syntax and scripts
+try {
+  const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  logCheck('pass', 'package.json syntax is valid');
+  check(packageJson.scripts['vercel-build'], 'vercel-build script configured');
+  check(packageJson.scripts['build'], 'build script configured');
+} catch (error) {
+  logCheck('fail', `package.json syntax error: ${error.message}`);
+}
 
 // Summary
 const passed = checks.filter(c => c.condition).length;

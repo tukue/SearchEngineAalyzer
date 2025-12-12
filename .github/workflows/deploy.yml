@@ -291,8 +291,21 @@ jobs:
       - name: Build for production
         run: npm run build
 
+      - name: Validate package.json syntax
+        run: node -e "JSON.parse(require('fs').readFileSync('package.json', 'utf8')); console.log('✅ package.json is valid');"
+
       - name: Final deployment validation
         run: node validate-deployment.js
+
+      - name: Pre-deployment build test
+        run: |
+          echo "🔍 Testing build before deployment..."
+          npm run build
+          if [ $? -ne 0 ]; then
+            echo "❌ Build failed - aborting deployment"
+            exit 1
+          fi
+          echo "✅ Build successful - proceeding with deployment"
 
       - name: Deploy to Vercel production
         uses: vercel/actions/deploy@v1
