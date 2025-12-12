@@ -24,6 +24,14 @@ app.get('/api/health', (req, res) => {
 // Analyze URL endpoint
 app.post('/api/analyze', async (req, res) => {
   try {
+    // Check for tenant authentication headers
+    const tenantId = req.headers['x-tenant-id'] as string;
+    const userId = req.headers['x-user-id'] as string;
+    
+    if (!tenantId || !userId) {
+      return res.status(401).json({ message: 'Missing tenant authentication' });
+    }
+    
     // Validate URL
     const { url } = urlSchema.parse(req.body);
     
@@ -331,6 +339,71 @@ app.post('/api/analyze', async (req, res) => {
     }
     console.error('Error analyzing website:', error);
     res.status(500).json({ message: 'Failed to analyze website' });
+  }
+});
+
+// Get audit status endpoint
+app.get('/api/audits/:id', async (req, res) => {
+  try {
+    const tenantId = req.headers['x-tenant-id'] as string;
+    const userId = req.headers['x-user-id'] as string;
+    
+    if (!tenantId || !userId) {
+      return res.status(401).json({ message: 'Missing tenant authentication' });
+    }
+    
+    const runId = parseInt(req.params.id);
+    if (isNaN(runId)) {
+      return res.status(400).json({ message: 'Invalid audit ID' });
+    }
+    
+    // For Vercel, we'll simulate a completed audit
+    const mockRun = {
+      id: runId,
+      tenantId,
+      userId,
+      target: 'https://metabol-balance-app.vercel.app/',
+      status: 'SUCCEEDED',
+      healthScore: 75,
+      summary: 'Health score 75% with 3 missing tags',
+      progress: 100,
+      createdAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      jobId: `job_${runId}`,
+      idempotencyKey: `mock_${runId}`
+    };
+    
+    const analysis = await storage.getAnalysis(runId);
+    
+    res.json({ run: mockRun, analysis });
+  } catch (error) {
+    console.error('Error fetching audit:', error);
+    res.status(500).json({ message: 'Failed to fetch audit' });
+  }
+});
+
+// Plan information endpoint
+app.get('/api/plan', async (req, res) => {
+  try {
+    const tenantId = req.headers['x-tenant-id'] as string;
+    const userId = req.headers['x-user-id'] as string;
+    
+    if (!tenantId || !userId) {
+      return res.status(401).json({ message: 'Missing tenant authentication' });
+    }
+    
+    // Return mock plan data for Vercel
+    res.json({
+      plan: 'free',
+      name: 'Free',
+      canExportReports: false,
+      maxHistoryLength: 5,
+      maxMonthlyRuns: 20,
+      remainingRuns: 18
+    });
+  } catch (error) {
+    console.error('Error fetching plan:', error);
+    res.status(500).json({ message: 'Failed to fetch plan' });
   }
 });
 

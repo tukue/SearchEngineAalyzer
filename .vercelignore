@@ -1,0 +1,22 @@
+# Development files
+*.test.js
+test-*.js
+check-*.js
+integration-test.js
+IMPLEMENTATION_NOTES.md
+TDD_*.md
+INTEGRATION_TEST_RESULTS.md
+
+# IDE files
+.idea/
+*.log
+
+# Test artifacts
+coverage/
+.nyc_output/
+
+# Local environment
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
