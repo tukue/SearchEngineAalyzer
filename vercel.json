@@ -3,11 +3,11 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "dist/client",
-  "functions": {
-    "api/**": {
-      "runtime": "nodejs20.x"
-    }
-  },
+  "builds": [
+    { "src": "api/index.ts", "use": "@vercel/node@3.2.29" },
+    { "src": "dist/client/**", "use": "@vercel/static@1.0.0" },
+    { "src": "public/deploy-home.html", "use": "@vercel/static@1.0.0" }
+  ],
   "cleanUrls": true,
   "trailingSlash": false,
   "routes": [
