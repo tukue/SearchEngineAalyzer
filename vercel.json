@@ -5,7 +5,7 @@
   "outputDirectory": "dist/client",
   "functions": {
     "api/**": {
-      "runtime": "@vercel/node@3.2.29"
+      "runtime": "nodejs20.x"
     }
   },
   "cleanUrls": true,
