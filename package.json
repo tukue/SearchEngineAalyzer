@@ -8,7 +8,7 @@
     "build": "npm run check && npm run build:client && npm run build:server",
     "build:client": "npx vite build --config vite.config.simple.js",
     "build:server": "npx esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
-    "vercel-build": "echo Building for Vercel deployment && mkdir dist\\client 2>nul || echo Directory exists && echo ^<h1^>Meta Tag Analyzer^</h1^>^<p^>Deployment in progress...^</p^> > dist\\client\\index.html",
+    "vercel-build": "chmod +x build.sh && ./build.sh",
     "start": "node dist/index.js",
     "check": "echo 'TypeScript check skipped for deployment'",
     "pre-deploy": "npm run check && npm run build && npm run test:integration",

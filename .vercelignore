@@ -6,6 +6,9 @@ integration-test.js
 IMPLEMENTATION_NOTES.md
 TDD_*.md
 INTEGRATION_TEST_RESULTS.md
+run-tests.sh
+vite.config.ts
+vite.config.simple.js
 
 # IDE files
 .idea/
@@ -14,6 +17,10 @@ INTEGRATION_TEST_RESULTS.md
 # Test artifacts
 coverage/
 .nyc_output/
+
+# Build files that cause issues
+node_modules/
+package-lock.json
 
 # Local environment
 .env.local

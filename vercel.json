@@ -1,17 +1,17 @@
 {
   "version": 2,
-  "buildCommand": "npm install && npm run vercel-build",
+  "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist/client",
-  "installCommand": "npm install --legacy-peer-deps",
+  "installCommand": "npm ci",
   "functions": {
-    "api/index.ts": {
+    "api/*.ts": {
       "runtime": "nodejs20.x"
     }
   },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.ts"
+      "destination": "/api/index"
     },
     {
       "source": "/(.*)",
