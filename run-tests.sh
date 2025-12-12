@@ -93,6 +93,15 @@ if [ $? -ne 0 ]; then
 fi
 
 echo -e "\n\n========================================================"
+echo "Running full functionality sample audit test..."
+echo "========================================================"
+node full-audit-sample.test.js
+if [ $? -ne 0 ]; then
+  echo "Full functionality sample audit test failed!"
+  exit 1
+fi
+
+echo -e "\n\n========================================================"
 echo "Running integration tests..."
 echo "========================================================"
 node integration-test.js
