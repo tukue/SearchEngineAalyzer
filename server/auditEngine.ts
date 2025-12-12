@@ -102,8 +102,23 @@ function clampScore(value: number): number {
   return Math.round(value);
 }
 
-type ParsedMetaTag = Omit<MetaTag, "id"> & { isPresent: boolean };
-type ParsedRecommendation = Omit<Recommendation, "id" | "analysisId">;
+type ParsedMetaTag = {
+  name?: string | null;
+  property?: string | null;
+  httpEquiv?: string | null;
+  charset?: string | null;
+  content?: string | null;
+  rel?: string | null;
+  url?: string;
+  tagType: string;
+  isPresent: boolean;
+};
+
+type ParsedRecommendation = {
+  tagName: string;
+  description: string;
+  example: string;
+};
 
 function analyzeMetaTags(url: string, html: string): AnalysisResult {
   const $ = cheerio.load(html);
@@ -328,8 +343,25 @@ function analyzeMetaTags(url: string, html: string): AnalysisResult {
       healthScore,
       timestamp: new Date().toISOString(),
     },
-    tags: foundMetaTags,
-    recommendations,
+    tags: foundMetaTags.map(tag => ({
+      id: 0,
+      name: tag.name || null,
+      property: tag.property || null,
+      httpEquiv: tag.httpEquiv || null,
+      charset: tag.charset || null,
+      content: tag.content || null,
+      rel: tag.rel || null,
+      url: url,
+      tagType: tag.tagType,
+      isPresent: tag.isPresent
+    })),
+    recommendations: recommendations.map((rec, index) => ({
+      id: index + 1,
+      analysisId: 0,
+      tagName: rec.tagName,
+      description: rec.description,
+      example: rec.example
+    })),
   };
 }
 
@@ -428,10 +460,29 @@ function scoreFromIssues(base: number, issues: AuditIssue[], categories: AuditIs
   return clampScore(score);
 }
 
-export async function runMetaAudit(url: string): Promise<AnalysisResult> {
+export async function runMetaAudit(url: string, progressCallback?: (progress: number) => void): Promise<AnalysisResult> {
   const normalizedUrl = normalizeUrl(url);
+  
+  if (progressCallback) {
+    progressCallback(0.2); // 20% - URL normalized
+    await new Promise(resolve => setTimeout(resolve, 500)); // Small delay to show progress
+  }
+  
   const { html, finalUrl } = await fetchPage(normalizedUrl);
-  return analyzeMetaTags(finalUrl, html);
+  
+  if (progressCallback) {
+    progressCallback(0.6); // 60% - Page fetched
+    await new Promise(resolve => setTimeout(resolve, 800)); // Small delay to show progress
+  }
+  
+  const result = analyzeMetaTags(finalUrl, html);
+  
+  if (progressCallback) {
+    progressCallback(1.0); // 100% - Analysis complete
+    await new Promise(resolve => setTimeout(resolve, 300)); // Small delay to show progress
+  }
+  
+  return result;
 }
 
 export async function performFullAudit(url: string): Promise<FullAuditResult> {

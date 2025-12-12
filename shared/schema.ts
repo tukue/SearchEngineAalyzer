@@ -47,6 +47,7 @@ export const auditRuns = pgTable("audit_runs", {
   status: text("status").notNull(),
   healthScore: integer("health_score"),
   summary: text("summary"),
+  progress: integer("progress").default(0),
   createdAt: text("created_at").notNull(),
   completedAt: text("completed_at"),
   jobId: text("job_id"),

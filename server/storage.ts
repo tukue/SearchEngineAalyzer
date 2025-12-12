@@ -270,6 +270,113 @@ export class MemStorage implements IStorage {
     this.usage.set(tenantId, updated);
     return updated;
   }
+
+  async getDashboardStats(tenantId: string): Promise<{
+    totalRuns: number;
+    successfulRuns: number;
+    failedRuns: number;
+    averageScore: number;
+    trendsData: Array<{ date: string; score: number; runs: number }>;
+    recentRuns: Array<{
+      id: number;
+      url: string;
+      status: string;
+      score?: number;
+      createdAt: string;
+    }>;
+  }> {
+    const runs = Array.from(this.auditRuns.values())
+      .filter(r => r.tenantId === tenantId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const totalRuns = runs.length;
+    const successfulRuns = runs.filter(r => r.status === "COMPLETED").length;
+    const failedRuns = runs.filter(r => r.status === "FAILED").length;
+
+    // Calculate average score from completed runs with analysis data
+    const completedRuns = runs.filter(r => r.status === "COMPLETED");
+    let totalScore = 0;
+    let scoredRuns = 0;
+
+    for (const run of completedRuns) {
+      const analysis = this.analyses.get(run.id);
+      if (analysis && analysis.healthScore) {
+        totalScore += analysis.healthScore;
+        scoredRuns++;
+      }
+    }
+
+    const averageScore = scoredRuns > 0 ? totalScore / scoredRuns : 0;
+
+    // Generate trends data (last 7 days)
+    const trendsData = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dayRuns = runs.filter(r => {
+        const runDate = new Date(r.createdAt).toISOString().split('T')[0];
+        return runDate === dateStr;
+      });
+      
+      const dayScores = dayRuns
+        .map(r => this.analyses.get(r.id)?.healthScore)
+        .filter(s => s !== undefined) as number[];
+      
+      const avgScore = dayScores.length > 0 ? dayScores.reduce((a, b) => a + b, 0) / dayScores.length : 0;
+      
+      trendsData.push({
+        date: dateStr,
+        score: Math.round(avgScore),
+        runs: dayRuns.length
+      });
+    }
+
+    // Recent runs with scores
+    const recentRuns = runs.slice(0, 10).map(run => {
+      const analysis = this.analyses.get(run.id);
+      return {
+        id: run.id,
+        url: run.target,
+        status: run.status,
+        score: analysis?.healthScore,
+        createdAt: run.createdAt
+      };
+    });
+
+    return {
+      totalRuns,
+      successfulRuns,
+      failedRuns,
+      averageScore: Math.round(averageScore),
+      trendsData,
+      recentRuns
+    };
+  }
+
+  async deleteAuditRun(id: number, tenantId: string): Promise<boolean> {
+    const run = this.auditRuns.get(id);
+    if (!run || run.tenantId !== tenantId) {
+      return false;
+    }
+
+    // Remove audit run
+    this.auditRuns.delete(id);
+    
+    // Remove associated analysis data
+    this.analyses.delete(id);
+    this.metaTags.delete(id);
+    this.recommendations.delete(id);
+    
+    // Remove idempotency key if exists
+    if (run.idempotencyKey) {
+      this.idempotencyKeys.delete(`${tenantId}:${run.idempotencyKey}`);
+    }
+
+    return true;
+  }
 }
 
 // Export storage instance

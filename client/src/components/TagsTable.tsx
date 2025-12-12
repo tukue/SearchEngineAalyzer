@@ -39,9 +39,9 @@ export default function TagsTable({ tags }: TagsTableProps) {
   // Function to get tag status badge
   const getStatusBadge = (isPresent: boolean) => {
     if (isPresent) {
-      return <Badge variant="success" className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-success">Good</Badge>;
+      return <Badge variant="default" className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Good</Badge>;
     }
-    return <Badge variant="warning" className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-secondary">Missing</Badge>;
+    return <Badge variant="secondary" className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">Missing</Badge>;
   };
 
   // Function to get tag attributes as a string

@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { HistoryIcon, RefreshCw, ExternalLink } from "lucide-react";
+import { HistoryIcon, RefreshCw, ExternalLink, BarChart3, Settings } from "lucide-react";
 import URLInputForm from "@/components/URLInputForm";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
 import ResultsContainer from "@/components/ResultsContainer";
 import GettingStarted from "@/components/GettingStarted";
+import Dashboard from "@/components/Dashboard";
+import HistoryManager from "@/components/HistoryManager";
+import AuditStatusTracker from "@/components/AuditStatusTracker";
 import { AnalysisResult } from "@shared/schema";
 import { 
   DropdownMenu,
@@ -18,6 +21,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type SearchHistoryItem = {
   url: string;
@@ -28,6 +32,8 @@ export default function Home() {
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
+  const [activeTab, setActiveTab] = useState("audit");
+  const [currentRunId, setCurrentRunId] = useState<number | undefined>(undefined);
   const { toast } = useToast();
 
   // Load search history from localStorage when component mounts
@@ -49,18 +55,19 @@ export default function Home() {
       const res = await apiRequest("POST", "/api/analyze", { url });
       return res.json();
     },
-    onSuccess: (data: AnalysisResult) => {
-      setAnalysisResults(data);
-      setShowResults(true);
+    onSuccess: (data: { runId: number; jobId: string; status: string; target: string }) => {
+      // Set the current run ID for status tracking
+      setCurrentRunId(data.runId);
+      setActiveTab("status");
 
       // Add to search history
       const newHistoryItem = {
-        url: data.analysis.url,
+        url: data.target,
         timestamp: new Date().toISOString(),
       };
 
       // Update history - keep only the 10 most recent searches
-      const updatedHistory = [newHistoryItem, ...searchHistory.filter(item => item.url !== data.analysis.url)]
+      const updatedHistory = [newHistoryItem, ...searchHistory.filter(item => item.url !== data.target)]
         .slice(0, 10);
 
       setSearchHistory(updatedHistory);
@@ -69,8 +76,8 @@ export default function Home() {
       localStorage.setItem('metaTagAnalyzerHistory', JSON.stringify(updatedHistory));
 
       toast({
-        title: "Analysis Complete",
-        description: `Successfully analyzed meta tags for ${data.analysis.url}`,
+        title: "Audit Queued",
+        description: `Audit started for ${data.target}. Track progress in the Status tab.`,
       });
     },
     onError: (err: Error) => {
@@ -84,7 +91,44 @@ export default function Home() {
 
   const handleSubmit = (url: string) => {
     setShowResults(false);
+    setCurrentRunId(undefined);
     mutate(url);
+  };
+
+  const handleAuditComplete = (runId: number) => {
+    // Fetch the completed audit results
+    apiRequest("GET", `/api/audits/${runId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.analysis) {
+          setAnalysisResults(data.analysis);
+          setShowResults(true);
+          setActiveTab("results");
+        }
+      })
+      .catch(err => {
+        console.error("Failed to fetch completed audit:", err);
+      });
+  };
+
+  const handleViewAudit = (runId: number) => {
+    // Navigate to audit results
+    apiRequest("GET", `/api/audits/${runId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.analysis) {
+          setAnalysisResults(data.analysis);
+          setShowResults(true);
+          setActiveTab("results");
+        }
+      })
+      .catch(err => {
+        toast({
+          variant: "destructive",
+          title: "Failed to Load Audit",
+          description: err.message,
+        });
+      });
   };
 
   const handleRetry = () => {
@@ -136,12 +180,21 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mt-2 md:mt-0">
+            <div className="mt-2 md:mt-0 flex gap-2">
+              <Button
+                variant={activeTab === "dashboard" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveTab("dashboard")}
+                className="h-10 shadow-sm"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-10 shadow-sm">
                     <HistoryIcon className="h-4 w-4 mr-2" />
-                    Search History
+                    Quick Access
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[300px]">
@@ -154,7 +207,7 @@ export default function Home() {
                     </div>
                   ) : (
                     <>
-                      {searchHistory.map((item, i) => (
+                      {searchHistory.slice(0, 5).map((item, i) => (
                         <DropdownMenuItem key={i} onClick={() => handleHistoryItemClick(item.url)}>
                           <div className="flex flex-col w-full">
                             <div className="flex items-center justify-between w-full">
@@ -167,6 +220,10 @@ export default function Home() {
                       ))}
 
                       <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setActiveTab("history")}>
+                        <HistoryIcon className="h-4 w-4 mr-2" />
+                        <span>View All History</span>
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleClearHistory}>
                         <RefreshCw className="h-4 w-4 mr-2" />
                         <span>Clear History</span>
@@ -178,45 +235,77 @@ export default function Home() {
             </div>
           </header>
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-[2fr,1fr]">
-            <div className="bg-white shadow-lg rounded-xl border border-slate-200/80 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Audit any public URL</p>
-                  <h2 className="text-xl font-semibold text-slate-900">Start a new audit</h2>
-                </div>
-                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">Live</span>
-              </div>
-              <URLInputForm onSubmit={handleSubmit} isLoading={isPending} />
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Status</p>
-                  <p className="text-sm font-semibold text-slate-900">Queued + tenant scoped</p>
-                </div>
-                <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">History</p>
-                  <p className="text-sm font-semibold text-slate-900">Recent runs & scores</p>
-                </div>
-                <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Limits</p>
-                  <p className="text-sm font-semibold text-slate-900">Usage-aware gating</p>
-                </div>
-              </div>
-            </div>
+          {/* Navigation Tabs */}
+          <div className="mt-8">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="audit">New Audit</TabsTrigger>
+                <TabsTrigger value="status">Status</TabsTrigger>
+                <TabsTrigger value="results">Results</TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
+                <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+              </TabsList>
 
-            <div className="bg-white shadow-lg rounded-xl border border-slate-200/80 p-5 flex flex-col gap-4">
-              <div>
-                <p className="text-sm font-medium text-slate-500">What you get</p>
-                <h3 className="text-lg font-semibold text-slate-900">Prioritized fixes</h3>
-                <p className="text-sm text-slate-600 mt-1">Health score, pass/fail groups, and top recommendations per run.</p>
-              </div>
-              <div className="space-y-3 text-sm text-slate-700">
-                <p className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Tenant-isolated results</p>
-                <p className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-blue-500" /> Download-ready data for exports</p>
-                <p className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-amber-500" /> Top 5 fixes with impact & effort</p>
-                <p className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-slate-400" /> Queue status: queued → running → done</p>
-              </div>
-            </div>
+              <TabsContent value="audit" className="space-y-6">
+                <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+                  <div className="bg-white shadow-lg rounded-xl border border-slate-200/80 p-6">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-500">Audit any public URL</p>
+                        <h2 className="text-xl font-semibold text-slate-900">Start a new audit</h2>
+                      </div>
+                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">Live</span>
+                    </div>
+                    <URLInputForm onSubmit={handleSubmit} isLoading={isPending} />
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Status</p>
+                        <p className="text-sm font-semibold text-slate-900">Queued + tenant scoped</p>
+                      </div>
+                      <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">History</p>
+                        <p className="text-sm font-semibold text-slate-900">Recent runs & scores</p>
+                      </div>
+                      <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Limits</p>
+                        <p className="text-sm font-semibold text-slate-900">Usage-aware gating</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white shadow-lg rounded-xl border border-slate-200/80 p-5 flex flex-col gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-slate-500">What you get</p>
+                      <h3 className="text-lg font-semibold text-slate-900">Prioritized fixes</h3>
+                      <p className="text-sm text-slate-600 mt-1">Health score, pass/fail groups, and top recommendations per run.</p>
+                    </div>
+                    <div className="space-y-3 text-sm text-slate-700">
+                      <p className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Tenant-isolated results</p>
+                      <p className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-blue-500" /> Download-ready data for exports</p>
+                      <p className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-amber-500" /> Top 5 fixes with impact & effort</p>
+                      <p className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-slate-400" /> Queue status: queued → running → done</p>
+                    </div>
+                  </div>
+                </div>
+                {!isPending && !isError && !showResults && <GettingStarted />}
+              </TabsContent>
+
+              <TabsContent value="status">
+                <AuditStatusTracker runId={currentRunId} onComplete={handleAuditComplete} />
+              </TabsContent>
+
+              <TabsContent value="results">
+                <ResultsContainer isVisible={showResults} results={analysisResults} />
+              </TabsContent>
+
+              <TabsContent value="history">
+                <HistoryManager onViewAudit={handleViewAudit} />
+              </TabsContent>
+
+              <TabsContent value="dashboard">
+                <Dashboard />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
@@ -227,12 +316,6 @@ export default function Home() {
 
         {/* Error State */}
         <ErrorState isVisible={isError} errorMessage={errorMessage} onRetry={handleRetry} />
-
-        {/* Results Container */}
-        <ResultsContainer isVisible={showResults} results={analysisResults} />
-
-        {/* Getting Started (Shown when no analysis has been run) */}
-        {!isPending && !isError && !showResults && <GettingStarted />}
       </div>
 
       {/* Footer */}

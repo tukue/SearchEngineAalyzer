@@ -61,9 +61,10 @@ export class AuditService {
       status: "QUEUED",
       healthScore: null,
       summary: null,
+      progress: 0,
       createdAt: new Date().toISOString(),
       completedAt: null,
-      jobId: undefined,
+      jobId: null,
       idempotencyKey: key,
     });
 
@@ -85,9 +86,10 @@ export class AuditService {
       status: "RUNNING",
       healthScore: null,
       summary: null,
+      progress: 0,
       createdAt: new Date().toISOString(),
       completedAt: null,
-      jobId: undefined,
+      jobId: null,
       idempotencyKey: `${normalizedUrl}:sync:${new Date().toISOString().slice(0, 10)}`,
     });
 
@@ -96,20 +98,34 @@ export class AuditService {
   }
 
   async processJob(job: AuditJobPayload): Promise<void> {
-    await this.storage.updateAuditRun(job.runId, { status: "RUNNING" });
+    await this.storage.updateAuditRun(job.runId, { status: "RUNNING", progress: 20 });
 
     try {
-      const result = await runMetaAudit(job.target);
+      // Update progress: Starting fetch
+      await this.storage.updateAuditRun(job.runId, { progress: 35 });
+      
+      const result = await runMetaAudit(job.target, (progress) => {
+        // Update progress during analysis
+        this.storage.updateAuditRun(job.runId, { progress: 35 + Math.round(progress * 0.5) });
+      });
+      
+      // Update progress: Analysis complete
+      await this.storage.updateAuditRun(job.runId, { progress: 90 });
+      
       const summary = `Health score ${result.analysis.healthScore}% with ${result.analysis.missingCount} missing tags`;
+      
+      await this.storage.createAnalysis({
+        ...result,
+        analysis: { ...result.analysis, id: job.runId },
+      });
+      
+      // Complete
       await this.storage.updateAuditRun(job.runId, {
         status: "SUCCEEDED",
         healthScore: result.analysis.healthScore,
         summary,
+        progress: 100,
         completedAt: new Date().toISOString(),
-      });
-      await this.storage.createAnalysis({
-        ...result,
-        analysis: { ...result.analysis, id: job.runId },
       });
     } catch (error) {
       const status = error instanceof Error && error.message === "TIMEOUT" ? "TIMED_OUT" : "FAILED";
@@ -122,6 +138,7 @@ export class AuditService {
       await this.storage.updateAuditRun(job.runId, {
         status,
         summary,
+        progress: 0,
         completedAt: new Date().toISOString(),
       });
     }

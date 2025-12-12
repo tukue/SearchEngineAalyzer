@@ -10,7 +10,10 @@
     "start": "NODE_ENV=production node dist/server/index.js",
     "audit:url": "node scripts/run-audit.js",
     "smoke:server": "bash scripts/server-smoke.sh",
+    "test:metabol": "node test-metabol.js",
+    "test:integration": "node integration-test.js",
     "test:local": "bash run-tests.sh",
+    "pre-deploy": "npm run check && npm run build",
     "check": "tsc",
     "db:push": "drizzle-kit push"
   },
