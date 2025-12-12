@@ -2,6 +2,11 @@
 
 Deliver features sequentially. Finish one section before starting the next. Keep KISS, SOLID, and clean architecture: controllers thin, services explicit, repositories scoped, and infra concerns isolated.
 
+## Progress Update (2024-11-03)
+- [x] Captured TDD plan and working assumptions to guide incremental delivery (see `TDD.md` and `ASSUMPTIONS.md`).
+- [x] Added `/api/audit` integration coverage using local fixtures to validate scoring contract end-to-end.
+- [ ] Next: wire tenant-scoped repositories and history persistence before expanding exports/entitlements.
+
 ## 0) Foundations (Pre-flight)
 - [ ] Confirm auth middleware surfaces `tenantId` and `userId` (server/index.ts). Add a dev-only `/api/debug/context` route to echo resolved context.
 - [ ] Document current DB schema and queue/storage choices in `README.md` or `/docs` for fast onboarding.
