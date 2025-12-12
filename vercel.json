@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "framework": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/client",
+  "functions": {
+    "api/**": {
+      "runtime": "@vercel/node@3.2.29"
+    }
+  },
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.ts" },
+    { "src": "/deploy-home", "dest": "/deploy-home.html" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
