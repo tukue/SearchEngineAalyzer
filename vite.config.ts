@@ -30,8 +30,12 @@ export default defineConfig({
     },
   },
   root: path.resolve(__dirname, "client"),
+  publicDir: path.resolve(__dirname, "public"),
   build: {
-    outDir: path.resolve(__dirname, "dist/public"),
+    // Keep client assets isolated from the server bundle so static hosts (e.g.
+    // Vercel) never expose server sources. The Express server will serve from
+    // dist/client while the server bundle lives in dist/server.
+    outDir: path.resolve(__dirname, "dist", "client"),
     emptyOutDir: true,
   },
 });
