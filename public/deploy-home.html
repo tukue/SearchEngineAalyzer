@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebAudit Deployment Check</title>
+  <style>
+    :root {
+      --bg: radial-gradient(circle at 10% 20%, #0f172a, #0b1120 45%, #0f172a 75%);
+      --card: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #e2e8f0;
+      --accent: #38bdf8;
+      --accent-2: #a855f7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+    }
+    .shell {
+      max-width: 920px;
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(10px);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .badge {
+      padding: 6px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(56, 189, 248, 0.12);
+      color: #7dd3fc;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .card {
+      background: linear-gradient(120deg, rgba(56, 189, 248, 0.12), rgba(168, 85, 247, 0.12));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 12px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+    }
+    .controls { display: flex; gap: 12px; flex-wrap: wrap; }
+    input[type="url"] {
+      flex: 1;
+      min-width: 260px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+    }
+    button {
+      background: linear-gradient(135deg, #38bdf8, #a855f7);
+      color: #0b1120;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 30px rgba(56, 189, 248, 0.4);
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 10px 36px rgba(168, 85, 247, 0.35); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
+    .results {
+      margin-top: 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      min-height: 120px;
+      font-family: "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      color: #cbd5e1;
+    }
+    .muted { color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="header">
+      <div class="title">WebAudit Deployment Check</div>
+      <div class="badge">Minimal homepage</div>
+    </div>
+    <div class="card">
+      <label for="url">Run a quick audit (GET /api/audit)</label>
+      <div class="controls">
+        <input id="url" type="url" placeholder="https://example.com" value="https://example.com" />
+        <button id="run">Run audit</button>
+      </div>
+      <div id="status" class="muted" style="margin-top:8px;">Ready to audit.</div>
+    </div>
+    <div id="output" class="results">Response will appear here…</div>
+  </div>
+  <div id="root" style="display:none"></div>
+  <script>
+    const runButton = document.getElementById('run');
+    const urlInput = document.getElementById('url');
+    const output = document.getElementById('output');
+    const statusEl = document.getElementById('status');
+
+    async function runAudit() {
+      const target = urlInput.value.trim();
+      if (!target) return;
+      runButton.disabled = true;
+      statusEl.textContent = 'Running audit...';
+      output.textContent = 'Fetching audit results...';
+      try {
+        const res = await fetch(`/api/audit?url=${encodeURIComponent(target)}`);
+        const text = await res.text();
+        try {
+          const json = JSON.parse(text);
+          output.textContent = JSON.stringify(json, null, 2);
+          statusEl.textContent = res.ok ? 'Audit complete' : 'Audit returned an error';
+        } catch (err) {
+          output.textContent = text;
+          statusEl.textContent = res.ok ? 'Audit complete' : 'Audit returned an error';
+        }
+      } catch (err) {
+        statusEl.textContent = 'Audit failed';
+        output.textContent = String(err);
+      } finally {
+        runButton.disabled = false;
+      }
+    }
+
+    runButton.addEventListener('click', runAudit);
+  </script>
+</body>
+</html>
