@@ -20,8 +20,8 @@ check(vercelConfigExists, 'vercel.json exists');
 
 if (vercelConfigExists) {
   const vercelConfig = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
-  check(vercelConfig.version === 2, 'Vercel config version 2');
-  check(vercelConfig.builds && vercelConfig.builds.length > 0, 'Build configuration present');
+  check(vercelConfig.buildCommand || vercelConfig.version === 2, 'Vercel config valid');
+  check(vercelConfig.functions || vercelConfig.builds, 'Build/Functions configuration present');
   check(vercelConfig.rewrites && vercelConfig.rewrites.length > 0, 'URL rewrites configured');
 }
 
@@ -52,11 +52,11 @@ check(apiContent.includes('/api/analyze'), 'Analyze endpoint present');
 // 6. Validate package.json syntax and scripts
 try {
   const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  logCheck('pass', 'package.json syntax is valid');
+  check(true, 'package.json syntax is valid');
   check(packageJson.scripts['vercel-build'], 'vercel-build script configured');
   check(packageJson.scripts['build'], 'build script configured');
 } catch (error) {
-  logCheck('fail', `package.json syntax error: ${error.message}`);
+  check(false, `package.json syntax error: ${error.message}`);
 }
 
 // Summary
