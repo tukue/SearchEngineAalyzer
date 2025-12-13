@@ -73,9 +73,9 @@ export function serveStatic(app: Express) {
   // In production we serve the Vite build artifacts generated in dist/client
   // (see vite.config.ts). Keeping client assets isolated ensures platforms like
   // Vercel pick up the compiled index.html rather than any server bundle.
-  // When bundled, this file lives in dist/server, so we walk up one directory
+  // When bundled, this file lives in dist/, so we walk up one directory
   // to reach dist/client where Vite emits the compiled SPA assets.
-  const distPath = path.resolve(__dirname, "..", "client");
+  const distPath = path.resolve(__dirname, "..", "dist", "client");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
