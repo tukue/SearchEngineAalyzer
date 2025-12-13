@@ -34,11 +34,28 @@ jobs:
       - name: Run MVP measurements tests
         run: npm run test:mvp --if-present
 
-      - name: Run integration tests
-        run: npm run test:integration --if-present
-
       - name: Build application
         run: npm run build
+
+      - name: Start API server
+        run: |
+          npm run start &
+          for i in {1..30}; do
+            if curl -sSf http://localhost:5000/api/health >/dev/null; then
+              echo "API is healthy";
+              break;
+            fi
+            echo "Waiting for API to start...";
+            sleep 2;
+          done
+          if ! curl -sSf http://localhost:5000/api/health >/dev/null; then
+            echo "API failed to start";
+            exit 1;
+          fi
+        shell: bash
+
+      - name: Run integration tests
+        run: npm run test:integration --if-present
 
       - name: Validate MVP measurements integration
         run: node validate-deployment.js
@@ -48,3 +65,8 @@ jobs:
 
       - name: Smoke test production server (localhost)
         run: npm run smoke:server --if-present
+
+      - name: Stop API server
+        if: always()
+        run: |
+          pkill -f "node dist/index.js" || true
