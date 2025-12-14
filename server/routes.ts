@@ -5,8 +5,10 @@ import express from "express";
 import { urlSchema } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
-import fetch from "node-fetch";
+import nodeFetch from "node-fetch";
 import * as cheerio from "cheerio";
+
+const getFetch = () => globalThis.fetch ?? (nodeFetch as unknown as typeof fetch);
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
@@ -36,7 +38,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch the website content
       let response;
       try {
-        response = await fetch(normalizedUrl, {
+        const fetchFn = getFetch();
+        response = await fetchFn(normalizedUrl, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (compatible; MetaTagAnalyzer/1.0)'
           }

@@ -21,6 +21,7 @@ export default {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       useESM: true,
+      tsconfig: './tsconfig.jest.json'
     }]
   },
   extensionsToTreatAsEsm: ['.ts', '.tsx']

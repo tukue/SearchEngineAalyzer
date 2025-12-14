@@ -1,41 +1,42 @@
+import { jest } from '@jest/globals';
 import express from 'express';
 import { registerRoutes } from '../routes';
 import supertest from 'supertest';
 import { Server } from 'http';
 import { storage } from '../storage';
 
-// Mock the fetch function
-jest.mock('node-fetch', () => {
-  return jest.fn().mockImplementation(() => {
-    return Promise.resolve({
-      ok: true,
-      status: 200,
-      statusText: 'OK',
-      text: () => Promise.resolve(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Test Website</title>
-          <meta charset="UTF-8">
-          <meta name="description" content="This is a test website for unit testing">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <meta property="og:title" content="Test OG Title">
-        </head>
-        <body>
-          <h1>Test Content</h1>
-        </body>
-        </html>
-      `)
-    });
-  });
-});
+const mockFetch: jest.MockedFunction<typeof fetch> = jest.fn();
 
 describe('API Routes', () => {
   let app: express.Express;
   let server: Server;
   let request: any; // Use any to avoid type issues with supertest
 
+  beforeEach(() => {
+    mockFetch.mockReset();
+    const htmlResponse = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Test Website</title>
+        <meta charset="UTF-8">
+        <meta name="description" content="This is a test website for unit testing">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Test OG Title">
+      </head>
+      <body>
+        <h1>Test Content</h1>
+      </body>
+      </html>
+    `;
+
+    mockFetch.mockResolvedValue(
+      new Response(htmlResponse, { status: 200, statusText: 'OK' })
+    );
+  });
+
   beforeAll(async () => {
+    (global as any).fetch = mockFetch;
     app = express();
     app.use(express.json());
     server = await registerRoutes(app);
@@ -43,7 +44,9 @@ describe('API Routes', () => {
   });
 
   afterAll((done) => {
-    if (server) {
+    mockFetch.mockReset();
+    delete (global as any).fetch;
+    if (server?.listening) {
       server.close(done);
     } else {
       done();
