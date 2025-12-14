@@ -1,5 +1,6 @@
 import http from 'http';
 import request from 'supertest';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import handler from '../../api/index';
 import fetch from 'node-fetch';
 
@@ -12,8 +13,15 @@ describe('Vercel deployment API integration', () => {
     fetchMock.mockReset();
   });
 
+  const createServer = () =>
+    http.createServer((req, res) => {
+      const vercelReq = Object.assign(req, { query: {}, body: undefined }) as VercelRequest;
+      const vercelRes = res as VercelResponse;
+      return handler(vercelReq, vercelRes);
+    });
+
   it('serves JSON for the health route instead of raw source', async () => {
-    const server = http.createServer((req, res) => handler(req as any, res as any));
+    const server = createServer();
 
     const res = await request(server).get('/api/health');
 
@@ -58,10 +66,12 @@ describe('Vercel deployment API integration', () => {
       ok: true,
       status: 200,
       statusText: 'OK',
-      text: async () => html
+      text: async () => html,
+      headers: new Headers({ 'content-type': 'text/html' }),
+      url: 'https://example.com'
     } as any);
 
-    const server = http.createServer((req, res) => handler(req as any, res as any));
+    const server = createServer();
 
     const res = await request(server)
       .post('/api/analyze')
@@ -72,7 +82,12 @@ describe('Vercel deployment API integration', () => {
     expect(res.headers['content-type']).toContain('application/json');
     expect(res.body.analysis.url).toContain('https://example.com');
     expect(res.body.analysis.totalCount).toBeGreaterThan(0);
-    expect(res.body.tags.some((tag: any) => tag.name === 'description')).toBe(true);
+    expect(
+      res.body.tags.some(
+        (tag: { name: string; content?: string }) =>
+          tag.name === 'description' && tag.content === 'Example description'
+      )
+    ).toBe(true);
     expect(res.body.recommendations.length).toBeGreaterThanOrEqual(0);
   });
 });
