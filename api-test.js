@@ -10,38 +10,14 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function serverReady() {
-  try {
-    const response = await fetch('http://localhost:5000/api/health');
-    return response.ok;
-  } catch (error) {
-    if (error?.code !== 'ECONNREFUSED') {
-      console.warn('Health check error:', error.message || error);
-    }
-    return false;
-  }
-}
-
 async function ensureServerRunning() {
-  if (await serverReady()) {
-    return { started: false };
-  }
-
   console.log('Starting API server for tests...');
   const serverProcess = spawn('npm', ['run', 'dev'], {
     stdio: 'inherit',
-    env: { ...process.env, NODE_ENV: 'test' },
+    env: { ...process.env, NODE_ENV: 'development' },
   });
 
-  // Give the dev server a moment to boot before checking health
-  for (let attempt = 0; attempt < 10; attempt++) {
-    if (await serverReady()) {
-      return { started: true, serverProcess };
-    }
-    await delay(1000);
-  }
-
-  throw new Error('API server did not become ready in time');
+  return { started: true, serverProcess };
 }
 
 async function shutdownServer(serverProcess) {
@@ -61,13 +37,31 @@ async function testApi() {
   const { started, serverProcess } = await ensureServerRunning();
 
   try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ url: testUrl }),
-    });
+    // Give the dev server a short moment to boot before sending requests
+    await delay(2000);
+
+    let response;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      try {
+        response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url: testUrl }),
+        });
+        break;
+      } catch (error) {
+        if (error?.code !== 'ECONNREFUSED') {
+          console.warn('Request error:', error.message || error);
+        }
+        await delay(1000);
+      }
+    }
+
+    if (!response) {
+      throw new Error('API server did not become ready in time');
+    }
 
     if (!response.ok) {
       console.error(`API returned error: ${response.status} ${response.statusText}`);
