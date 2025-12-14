@@ -1,41 +1,30 @@
 // API test script to validate the API functionality
 
-import net from 'net';
 import { spawn } from 'child_process';
 
 // Test URL to analyze
 const testUrl = 'https://example.com';
 const apiUrl = 'http://localhost:5000/api/analyze';
 
-function waitForPort(port, timeoutMs = 20000) {
-  const start = Date.now();
-  return new Promise((resolve, reject) => {
-    const attempt = () => {
-      const socket = net.createConnection({ port }, () => {
-        socket.end();
-        resolve(true);
-      });
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-      socket.on('error', () => {
-        socket.destroy();
-        if (Date.now() - start >= timeoutMs) {
-          reject(new Error(`Timed out waiting for port ${port}`));
-        } else {
-          setTimeout(attempt, 500);
-        }
-      });
-    };
-
-    attempt();
-  });
+async function serverReady() {
+  try {
+    const response = await fetch('http://localhost:5000/api/health');
+    return response.ok;
+  } catch (error) {
+    if (error?.code !== 'ECONNREFUSED') {
+      console.warn('Health check error:', error.message || error);
+    }
+    return false;
+  }
 }
 
 async function ensureServerRunning() {
-  try {
-    await waitForPort(5000, 2000);
+  if (await serverReady()) {
     return { started: false };
-  } catch {
-    // fallthrough to start server
   }
 
   console.log('Starting API server for tests...');
@@ -44,16 +33,15 @@ async function ensureServerRunning() {
     env: { ...process.env, NODE_ENV: 'test' },
   });
 
-  const readyPromise = waitForPort(5000, 20000);
-  const exitPromise = new Promise((_, reject) => {
-    serverProcess.on('exit', code => {
-      reject(new Error(`API server exited before becoming ready (code ${code ?? 'unknown'})`));
-    });
-    serverProcess.on('error', err => reject(err));
-  });
+  // Give the dev server a moment to boot before checking health
+  for (let attempt = 0; attempt < 10; attempt++) {
+    if (await serverReady()) {
+      return { started: true, serverProcess };
+    }
+    await delay(1000);
+  }
 
-  await Promise.race([readyPromise, exitPromise]);
-  return { started: true, serverProcess };
+  throw new Error('API server did not become ready in time');
 }
 
 async function shutdownServer(serverProcess) {
