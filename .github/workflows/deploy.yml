@@ -27,17 +27,14 @@ jobs:
       - name: Build application
         run: npm run build
       
-      # Example deployment to a hosting service
-      # You can replace this with your actual deployment steps
-      - name: Deploy to production
-        run: |
-          echo "Deploying application to production..."
-          # Add your deployment commands here
-          # For example:
-          # - npm run deploy
-          # - Deploy to Netlify, Vercel, or your preferred hosting
-          echo "Deployment completed successfully!"
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
         
       - name: Notify about successful deployment
         run: |
-          echo "✅ Meta Tag Analyzer has been deployed successfully!"
+          echo "✅ Meta Tag Analyzer deployed to Vercel successfully!"
