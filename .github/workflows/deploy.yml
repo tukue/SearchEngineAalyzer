@@ -32,8 +32,8 @@ jobs:
 
       - name: Document root cause of previous failures
         run: |
-          echo "Root cause: npm scripts could not find project binaries during build because node_modules/.bin was absent in CI."
-          echo "Fix: use a single Node.js 20 pipeline that performs a clean install, runs tests, builds the frontend, and deploys only built assets."
+          echo "Root cause: the Vercel deploy step packaged the repository from the project root, so the bundled server build was uploaded and rendered as source instead of the compiled single-page frontend."
+          echo "Fix: keep one Node 20 pipeline that runs all checks, builds the app, then deploys only the static frontend bundle from dist without any server artifacts."
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
@@ -54,7 +54,8 @@ jobs:
       - name: Build frontend only
         run: |
           npm run build -- --mode production
-          ls -lah dist/public
+          rsync -a --delete --include='index.html' --include='assets/***' --exclude='*' dist/public/ dist/frontend-static/
+          ls -lah dist/frontend-static
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -63,4 +64,4 @@ jobs:
         run: vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
 
       - name: Deploy static frontend output
-        run: vercel deploy dist/public --prod --token "$VERCEL_TOKEN" --yes
+        run: vercel deploy dist/frontend-static --prod --token "$VERCEL_TOKEN" --yes
