@@ -32,8 +32,8 @@ jobs:
 
       - name: Document root cause of previous failures
         run: |
-          echo "Root cause: the Vercel deploy step packaged the repository from the project root, so the bundled server build was uploaded and rendered as source instead of the compiled single-page frontend."
-          echo "Fix: keep one Node 20 pipeline that runs all checks, builds the app, then deploys only the static frontend bundle from dist without any server artifacts."
+          echo "Root cause: Vercel still built from the repository root, so server sources were published instead of the compiled SPA."
+          echo "Fix: prepare a Vercel v3 output with only the built static client and deploy it with --prebuilt so no server code is uploaded or compiled."
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
@@ -53,9 +53,13 @@ jobs:
 
       - name: Build frontend only
         run: |
-          npm run build -- --mode production
-          rsync -a --delete --include='index.html' --include='assets/***' --exclude='*' dist/public/ dist/frontend-static/
-          ls -lah dist/frontend-static
+          npm run build:frontend
+          mkdir -p .vercel/output/static
+          rsync -a --delete dist/public/ .vercel/output/static/
+          cat > .vercel/output/config.json <<'EOF'
+          {"version":3,"routes":[{"src":"/(.*)","dest":"/index.html"}]}
+          EOF
+          ls -lah .vercel/output/static
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -64,4 +68,4 @@ jobs:
         run: vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
 
       - name: Deploy static frontend output
-        run: vercel deploy dist/frontend-static --prod --token "$VERCEL_TOKEN" --yes
+        run: vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN" --yes
