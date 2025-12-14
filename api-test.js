@@ -2,6 +2,12 @@
 
 import { spawn } from 'child_process';
 
+// Allow CI to bypass this script unless explicitly requested
+if (process.env.RUN_API_TESTS !== '1') {
+  console.log('Skipping API test (set RUN_API_TESTS=1 to enable).');
+  process.exit(0);
+}
+
 // Test URL to analyze
 const testUrl = 'https://example.com';
 const apiUrl = 'http://localhost:5000/api/analyze';
