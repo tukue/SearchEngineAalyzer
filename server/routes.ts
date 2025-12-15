@@ -339,7 +339,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
 
-  if (process.env.NODE_ENV === "test" && !httpServer.listening) {
+  const serverAddress = httpServer.address();
+
+  if (process.env.NODE_ENV === "test" && !serverAddress) {
     await new Promise<void>((resolve) => httpServer.listen(0, resolve));
   }
 
