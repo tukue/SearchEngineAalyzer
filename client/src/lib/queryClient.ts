@@ -7,6 +7,12 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+const defaultTenantHeaders = {
+  "x-tenant-id": (import.meta as any)?.env?.VITE_TENANT_ID || "demo-tenant",
+  "x-user-id": (import.meta as any)?.env?.VITE_USER_ID || "demo-user",
+  "x-tenant-role": (import.meta as any)?.env?.VITE_TENANT_ROLE || "owner",
+};
+
 export async function apiRequest(
   method: string,
   url: string,
@@ -14,7 +20,10 @@ export async function apiRequest(
 ): Promise<Response> {
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: {
+      ...defaultTenantHeaders,
+      ...(data ? { "Content-Type": "application/json" } : {}),
+    },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -30,6 +39,7 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const res = await fetch(queryKey[0] as string, {
+      headers: defaultTenantHeaders,
       credentials: "include",
     });
 
