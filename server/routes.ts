@@ -336,7 +336,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.use("/api", apiRouter);
-  
+
   const httpServer = createServer(app);
+
+  if (process.env.NODE_ENV === "test" && !httpServer.listening) {
+    await new Promise<void>((resolve) => httpServer.listen(0, resolve));
+  }
+
   return httpServer;
 }

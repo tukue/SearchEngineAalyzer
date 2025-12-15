@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "client/src/**/*",
+    "shared/**/*",
+    "server/**/*",
+    "__tests__/**/*",
+    "api/**/*",
+    "types/**/*.d.ts"
+  ],
+  "exclude": ["node_modules", "build", "dist", "server/vite.ts"],
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "types": ["jest", "node"],
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "typeRoots": ["./types", "./node_modules/@types"]
+  }
+}

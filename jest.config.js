@@ -20,8 +20,8 @@ export default {
   coverageDirectory: 'coverage',
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      useESM: true,
+      useESM: false,
+      tsconfig: './tsconfig.jest.json'
     }]
-  },
-  extensionsToTreatAsEsm: ['.ts', '.tsx']
+  }
 };
