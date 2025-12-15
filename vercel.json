@@ -19,18 +19,15 @@
       "dest": "/api/index.ts"
     },
     {
-      "handle": "filesystem"
+      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
+      "dest": "/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/public/$1"
-    },
-    {
-      "src": "/.*",
-      "dest": "/dist/public/index.html"
+      "dest": "/index.html"
     }
   ],
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist/public",
-  "installCommand": "npm ci"
+  "installCommand": "npm install"
 }

@@ -2,7 +2,7 @@ import http from 'http';
 import request from 'supertest';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import handler from '../../api/index';
-import fetch, { Headers } from 'node-fetch';
+import fetch from 'node-fetch';
 
 jest.mock('node-fetch', () => ({ __esModule: true, default: jest.fn() }));
 
@@ -15,14 +15,7 @@ describe('Vercel deployment API integration', () => {
 
   const createServer = () =>
     http.createServer((req, res) => {
-      const vercelReq: VercelRequest = Object.assign(req, {
-        query: {},
-        cookies: {},
-        body: undefined
-      });
-
-      // Express augments the native response; the handler only relies on the
-      // standard methods it adds, so we can treat it as a VercelResponse here.
+      const vercelReq = Object.assign(req, { query: {}, body: undefined }) as VercelRequest;
       const vercelRes = res as VercelResponse;
       return handler(vercelReq, vercelRes);
     });
@@ -74,7 +67,6 @@ describe('Vercel deployment API integration', () => {
       status: 200,
       statusText: 'OK',
       text: async () => html,
-      json: async () => ({ html }),
       headers: new Headers({ 'content-type': 'text/html' }),
       url: 'https://example.com'
     } as any);
