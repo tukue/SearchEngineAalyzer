@@ -19,7 +19,11 @@ declare global {
 export function requireTenantContext(req: Request, res: Response, next: NextFunction) {
   const tenantId = req.header("x-tenant-id") || "";
   const userId = req.header("x-user-id") || "";
-  const role = (req.header("x-tenant-role") as TenantRole) || "member";
+  const roleHeader = req.header("x-tenant-role");
+  const validRoles: TenantRole[] = ["owner", "member", "read-only"];
+  const role: TenantRole = validRoles.includes(roleHeader as TenantRole)
+    ? (roleHeader as TenantRole)
+    : "member";
 
   if (!tenantId || !userId) {
     return res.status(401).json({ message: "Missing tenant context" });

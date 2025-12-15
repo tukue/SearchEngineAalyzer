@@ -45,7 +45,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   apiRouter.get("/usage", (req, res) => {
-    const context = req.tenantContext!;
+    const context = req.tenantContext;
+    if (!context) {
+      return res.status(401).json({ message: "Missing tenant context" });
+    }
     const plan = getTenantPlan(context.tenantId);
     const usage = usageLedger.getSnapshot(context.tenantId, plan.monthlyQuota, plan.id);
     res.json({ usage, plan });

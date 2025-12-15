@@ -17,8 +17,9 @@ export class AuditQueue<T, R> {
 
   async enqueue(payload: T, processor: JobProcessor<T, R>): Promise<R> {
     const key = this.getKey(payload);
-    if (this.inflight.has(key)) {
-      return this.inflight.get(key)!;
+    const existingPromise = this.inflight.get(key);
+    if (existingPromise) {
+      return existingPromise;
     }
 
     const job: AuditJob<T> = { id: randomUUID(), payload, attempts: 0 };

@@ -23,6 +23,8 @@ const plans: Record<PlanId, Plan> = {
   },
 };
 
+// TODO: Replace with database-driven entitlements in production environments.
+// Demo mapping for development/testing only.
 const tenantPlans: Record<string, PlanId> = {
   "demo-tenant": "pro",
 };

@@ -19,7 +19,7 @@ export class UsageLedger {
     const remaining = Math.max(limit - count, 0);
     const warnings: string[] = [];
 
-    const warningRatio = count / limit;
+    const warningRatio = limit > 0 ? count / limit : 0;
     if (warningRatio >= 0.9) warnings.push("Usage at 90% of monthly quota");
     else if (warningRatio >= 0.8) warnings.push("Usage at 80% of monthly quota");
 

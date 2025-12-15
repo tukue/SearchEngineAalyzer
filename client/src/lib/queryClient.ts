@@ -8,9 +8,9 @@ async function throwIfResNotOk(res: Response) {
 }
 
 const defaultTenantHeaders = {
-  "x-tenant-id": (import.meta as any)?.env?.VITE_TENANT_ID || "demo-tenant",
-  "x-user-id": (import.meta as any)?.env?.VITE_USER_ID || "demo-user",
-  "x-tenant-role": (import.meta as any)?.env?.VITE_TENANT_ROLE || "owner",
+  "x-tenant-id": import.meta.env.VITE_TENANT_ID || "",
+  "x-user-id": import.meta.env.VITE_USER_ID || "",
+  "x-tenant-role": import.meta.env.VITE_TENANT_ROLE || "member",
 };
 
 export async function apiRequest(
