@@ -28,3 +28,18 @@ export function requireTenantContext(req: Request, res: Response, next: NextFunc
   req.tenantContext = { tenantId, userId, role };
   next();
 }
+
+export function requireRole(allowed: TenantRole[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const context = req.tenantContext;
+    if (!context) {
+      return res.status(401).json({ message: "Missing tenant context" });
+    }
+
+    if (!allowed.includes(context.role)) {
+      return res.status(403).json({ message: "Insufficient role for this action" });
+    }
+
+    next();
+  };
+}

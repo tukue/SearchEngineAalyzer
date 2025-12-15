@@ -116,7 +116,7 @@ describe('MemStorage', () => {
       const created = await storage.createAnalysis(analysisData);
       const id = created.analysis.id;
 
-      const retrieved = await storage.getAnalysis(id);
+      const retrieved = await storage.getAnalysis(id, tenantId);
 
       expect(retrieved).toBeDefined();
       expect(retrieved?.analysis.url).toBe('https://example.com');
@@ -124,7 +124,31 @@ describe('MemStorage', () => {
     });
 
     it('should return undefined for non-existent ID', async () => {
-      const result = await storage.getAnalysis(999);
+      const result = await storage.getAnalysis(999, tenantId);
+      expect(result).toBeUndefined();
+    });
+
+    it('should enforce tenant isolation when retrieving by ID', async () => {
+      const created = await storage.createAnalysis({
+        analysis: {
+          id: 0,
+          tenantId,
+          userId,
+          auditType: 'meta',
+          url: 'https://isolated.com',
+          totalCount: 1,
+          seoCount: 1,
+          socialCount: 0,
+          technicalCount: 0,
+          missingCount: 0,
+          healthScore: 90,
+          timestamp: new Date().toISOString(),
+        },
+        tags: [],
+        recommendations: [],
+      });
+
+      const result = await storage.getAnalysis(created.analysis.id, 'other-tenant');
       expect(result).toBeUndefined();
     });
   });

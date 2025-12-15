@@ -11,8 +11,8 @@ import {
 // Interface for storage operations
 export interface IStorage {
   createAnalysis(analysisData: AnalysisResult): Promise<AnalysisResult>;
-  getAnalysis(id: number): Promise<AnalysisResult | undefined>;
-  getAnalysisByUrl(url: string, tenantId?: string): Promise<AnalysisResult | undefined>;
+  getAnalysis(id: number, tenantId: string): Promise<AnalysisResult | undefined>;
+  getAnalysisByUrl(url: string, tenantId: string): Promise<AnalysisResult | undefined>;
   getRecentAnalyses(tenantId: string, url?: string, limit?: number): Promise<Analysis[]>;
 }
 
@@ -88,9 +88,9 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async getAnalysis(id: number): Promise<AnalysisResult | undefined> {
+  async getAnalysis(id: number, tenantId: string): Promise<AnalysisResult | undefined> {
     const analysis = this.analyses.get(id);
-    if (!analysis) return undefined;
+    if (!analysis || analysis.tenantId !== tenantId) return undefined;
     
     const tags = this.metaTags.get(id) || [];
     const recommendations = this.recommendations.get(id) || [];
@@ -102,14 +102,14 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async getAnalysisByUrl(url: string, tenantId?: string): Promise<AnalysisResult | undefined> {
+  async getAnalysisByUrl(url: string, tenantId: string): Promise<AnalysisResult | undefined> {
     // Find analysis by URL
     let analysisId: number | undefined;
     let foundAnalysis: Analysis | undefined;
 
     // Use forEach instead of for...of to avoid iterator issues
     this.analyses.forEach((analysis, id) => {
-      const matchesTenant = tenantId ? analysis.tenantId === tenantId : true;
+      const matchesTenant = analysis.tenantId === tenantId;
       if (analysis.url === url && matchesTenant && !foundAnalysis) {
         analysisId = id;
         foundAnalysis = analysis;

@@ -5,7 +5,7 @@ import express from "express";
 import { urlSchema } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { requireTenantContext } from "./context";
+import { requireRole, requireTenantContext } from "./context";
 import { AuditQueue } from "./queue";
 import { analyzeUrl } from "./services/analyzer";
 import { getTenantPlan } from "./entitlements";
@@ -40,6 +40,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.use(requireTenantContext);
 
+  apiRouter.get("/context", (req, res) => {
+    res.json({ context: req.tenantContext });
+  });
+
   apiRouter.get("/usage", (req, res) => {
     const context = req.tenantContext!;
     const plan = getTenantPlan(context.tenantId);
@@ -48,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analyze URL endpoint
-  apiRouter.post("/analyze", async (req, res) => {
+  apiRouter.post("/analyze", requireRole(["owner", "member"]), async (req, res) => {
     try {
       const context = req.tenantContext;
       if (!context) {
@@ -110,6 +114,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: error instanceof Error ? error.message : "Failed to analyze website",
       });
     }
+  });
+
+  apiRouter.get("/analyses/:id", async (req, res) => {
+    const context = req.tenantContext;
+    if (!context) {
+      return res.status(401).json({ message: "Missing tenant context" });
+    }
+
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ message: "Invalid analysis id" });
+    }
+
+    const analysis = await storage.getAnalysis(id, context.tenantId);
+    if (!analysis) {
+      return res.status(404).json({ message: "Analysis not found" });
+    }
+
+    res.json(analysis);
   });
 
   app.use("/api", apiRouter);
