@@ -1,10 +1,60 @@
-import { pgTable, text, serial, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Plan entitlements configuration
+export const PLAN_CONFIGS = {
+  free: {
+    monthlyAuditLimit: 10,
+    historyDepth: 5,
+    exportsEnabled: false,
+    webhooksEnabled: false,
+    apiAccessEnabled: false
+  },
+  pro: {
+    monthlyAuditLimit: 1000,
+    historyDepth: 100,
+    exportsEnabled: true,
+    webhooksEnabled: true,
+    apiAccessEnabled: true
+  }
+} as const;
+
+export type PlanType = keyof typeof PLAN_CONFIGS;
+export type PlanConfig = typeof PLAN_CONFIGS[PlanType];
+
+// Tenants model
+export const tenants = pgTable("tenants", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  plan: text("plan").notNull().default("free"), // 'free' | 'pro'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Plan change audit log
+export const planChanges = pgTable("plan_changes", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull(),
+  previousPlan: text("previous_plan").notNull(),
+  newPlan: text("new_plan").notNull(),
+  actorUserId: text("actor_user_id"),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+// Usage tracking for quotas
+export const usageTracking = pgTable("usage_tracking", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull(),
+  month: text("month").notNull(), // YYYY-MM format
+  auditCount: integer("audit_count").notNull().default(0),
+  exportCount: integer("export_count").notNull().default(0),
+});
 
 // Meta tag model
 export const metaTags = pgTable("meta_tags", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull(),
   url: text("url").notNull(),
   name: text("name"),
   property: text("property"),
@@ -19,6 +69,7 @@ export const metaTags = pgTable("meta_tags", {
 // Analysis results model
 export const analyses = pgTable("analyses", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull(),
   url: text("url").notNull(),
   totalCount: integer("total_count").notNull(),
   seoCount: integer("seo_count").notNull(),
@@ -39,14 +90,23 @@ export const recommendations = pgTable("recommendations", {
 });
 
 // Insert schemas
+export const insertTenantSchema = createInsertSchema(tenants).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPlanChangeSchema = createInsertSchema(planChanges).omit({ id: true, timestamp: true });
+export const insertUsageTrackingSchema = createInsertSchema(usageTracking).omit({ id: true });
 export const insertMetaTagSchema = createInsertSchema(metaTags).omit({ id: true });
 export const insertAnalysisSchema = createInsertSchema(analyses).omit({ id: true });
 export const insertRecommendationSchema = createInsertSchema(recommendations).omit({ id: true });
 
 // Types
+export type InsertTenant = z.infer<typeof insertTenantSchema>;
+export type InsertPlanChange = z.infer<typeof insertPlanChangeSchema>;
+export type InsertUsageTracking = z.infer<typeof insertUsageTrackingSchema>;
 export type InsertMetaTag = z.infer<typeof insertMetaTagSchema>;
 export type InsertAnalysis = z.infer<typeof insertAnalysisSchema>;
 export type InsertRecommendation = z.infer<typeof insertRecommendationSchema>;
+export type Tenant = typeof tenants.$inferSelect;
+export type PlanChange = typeof planChanges.$inferSelect;
+export type UsageTracking = typeof usageTracking.$inferSelect;
 export type MetaTag = typeof metaTags.$inferSelect;
 export type Analysis = typeof analyses.$inferSelect;
 export type Recommendation = typeof recommendations.$inferSelect;
@@ -63,3 +123,22 @@ export type AnalysisResult = {
   tags: MetaTag[];
   recommendations: Recommendation[];
 };
+
+// Plan gating error types
+export const PlanGatingError = z.object({
+  code: z.enum(["PLAN_UPGRADE_REQUIRED", "QUOTA_EXCEEDED", "FEATURE_NOT_AVAILABLE"]),
+  feature: z.string(),
+  currentPlan: z.string(),
+  requiredPlan: z.string().optional(),
+  message: z.string(),
+});
+
+export type PlanGatingError = z.infer<typeof PlanGatingError>;
+
+// Tenant context for requests
+export const tenantContextSchema = z.object({
+  tenantId: z.number(),
+  plan: z.enum(["free", "pro"]),
+});
+
+export type TenantContext = z.infer<typeof tenantContextSchema>;

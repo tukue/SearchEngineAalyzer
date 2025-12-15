@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, getDefaultTenantContext } from "./storage";
+import { requireEntitlement, checkQuota, PlanGatingService } from "./plan-gating";
 import express from "express";
-import { urlSchema } from "@shared/schema";
+import { urlSchema, PLAN_CONFIGS, TenantContext } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import fetch from "node-fetch";
@@ -11,6 +12,16 @@ import * as cheerio from "cheerio";
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   const apiRouter = express.Router();
+  
+  // Middleware to add tenant context (simplified for MVP - uses default tenant)
+  apiRouter.use(async (req, res, next) => {
+    try {
+      req.tenantContext = await getDefaultTenantContext();
+      next();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to load tenant context" });
+    }
+  });
 
   // Health check endpoint for CI/CD
   apiRouter.get("/health", (req, res) => {
@@ -21,9 +32,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       version: "1.0.0"
     });
   });
+  
+  // Get current plan and entitlements
+  apiRouter.get("/plan", (req, res) => {
+    const tenantContext = req.tenantContext as TenantContext;
+    const planConfig = PLAN_CONFIGS[tenantContext.plan];
+    
+    res.json({
+      currentPlan: tenantContext.plan,
+      entitlements: planConfig,
+      tenantId: tenantContext.tenantId
+    });
+  });
+  
+  // Get analysis history with plan-based depth limiting
+  apiRouter.get("/history", async (req, res) => {
+    try {
+      const tenantContext = req.tenantContext as TenantContext;
+      const historyDepth = PlanGatingService.getQuotaLimit(tenantContext, 'historyDepth');
+      
+      const history = await storage.getAnalysisHistory(tenantContext.tenantId, historyDepth);
+      
+      res.json({
+        analyses: history,
+        limit: historyDepth,
+        currentPlan: tenantContext.plan
+      });
+    } catch (error) {
+      console.error("Error fetching history:", error);
+      res.status(500).json({ message: "Failed to fetch analysis history" });
+    }
+  });
+  
+  // Export analysis (gated feature)
+  apiRouter.post("/export/:id", requireEntitlement('exportsEnabled'), async (req, res) => {
+    try {
+      const tenantContext = req.tenantContext as TenantContext;
+      const analysisId = parseInt(req.params.id);
+      const format = req.body.format || 'json'; // json, pdf, html
+      
+      const analysis = await storage.getAnalysis(tenantContext.tenantId, analysisId);
+      if (!analysis) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+      
+      // Increment export usage
+      await storage.incrementUsage(tenantContext.tenantId, 'export');
+      
+      // For MVP, just return the analysis data
+      // In production, this would generate PDF/HTML exports
+      res.json({
+        message: "Export generated successfully",
+        format,
+        data: analysis
+      });
+    } catch (error) {
+      console.error("Error exporting analysis:", error);
+      res.status(500).json({ message: "Failed to export analysis" });
+    }
+  });
 
-  // Analyze URL endpoint
-  apiRouter.post("/analyze", async (req, res) => {
+  // Analyze URL endpoint with quota checking
+  apiRouter.post("/analyze", checkQuota('monthlyAuditLimit'), async (req, res) => {
     try {
       // Validate URL
       const { url } = urlSchema.parse(req.body);
@@ -322,7 +392,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       // Store the results
-      const storedAnalysis = await storage.createAnalysis(analysisResult);
+      const tenantContext = req.tenantContext as TenantContext;
+      const storedAnalysis = await storage.createAnalysis(tenantContext.tenantId, analysisResult);
+      
+      // Increment audit usage
+      await storage.incrementUsage(tenantContext.tenantId, 'audit');
       
       res.json(storedAnalysis);
     } catch (error) {
