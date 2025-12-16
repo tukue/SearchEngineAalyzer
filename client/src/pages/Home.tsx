@@ -9,6 +9,7 @@ import ErrorState from "@/components/ErrorState";
 import ResultsContainer from "@/components/ResultsContainer";
 import GettingStarted from "@/components/GettingStarted";
 import { usePlanInfo, usePlanGatingErrorHandler, FeatureGate, PlanComparison } from "@/components/PlanGating";
+import { Dashboard, ProjectManager, TrendsView } from "@/components/PersistenceComponents";
 import { AnalysisResult } from "@shared/schema";
 import { 
   DropdownMenu,
@@ -238,8 +239,10 @@ export default function Home() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="analyzer">Analyzer</TabsTrigger>
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="projects">Projects</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
             <TabsTrigger value="plan">Plan & Billing</TabsTrigger>
           </TabsList>
@@ -296,6 +299,21 @@ export default function Home() {
 
             {/* Getting Started (Shown when no analysis has been run) */}
             {!isPending && !isError && !showResults && <GettingStarted />}
+          </TabsContent>
+          
+          <TabsContent value="dashboard" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <Dashboard />
+              </div>
+              <div>
+                <TrendsView />
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="projects" className="space-y-6">
+            <ProjectManager />
           </TabsContent>
           
           <TabsContent value="history" className="space-y-6">

@@ -27,11 +27,6 @@
       "dest": "/index.html"
     }
   ],
-  "functions": {
-    "api/index.ts": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist/public",
   "installCommand": "npm install"
