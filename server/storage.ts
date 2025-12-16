@@ -10,6 +10,10 @@ import {
   type TenantContext,
   type PlanChange,
   type UsageTracking,
+  type UsageLedger,
+  type MonthlyUsage,
+  type InsertUsageLedger,
+  type InsertMonthlyUsage,
   PLAN_CONFIGS
 } from "@shared/schema";
 
@@ -26,9 +30,16 @@ export interface IStorage {
   getAnalysisByUrl(tenantId: number, url: string): Promise<AnalysisResult | undefined>;
   getAnalysisHistory(tenantId: number, limit?: number): Promise<Analysis[]>;
   
-  // Usage tracking
+  // Usage tracking (legacy)
   incrementUsage(tenantId: number, type: 'audit' | 'export'): Promise<void>;
   getCurrentUsage(tenantId: number, month: string): Promise<UsageTracking | undefined>;
+  
+  // Usage ledger (new)
+  createUsageLedgerEntry(entry: Omit<InsertUsageLedger, 'id'>): Promise<UsageLedger>;
+  getUsageLedgerEntry(tenantId: number, requestId: string): Promise<UsageLedger | undefined>;
+  updateUsageLedgerEntry(tenantId: number, requestId: string, status: 'completed' | 'failed'): Promise<void>;
+  getMonthlyUsage(tenantId: number, period: string): Promise<MonthlyUsage | undefined>;
+  updateMonthlyUsage(tenantId: number, period: string): Promise<void>;
 }
 
 // Memory storage implementation
@@ -39,12 +50,16 @@ export class MemStorage implements IStorage {
   private recommendations: Map<number, Recommendation[]>;
   private planChanges: Map<number, PlanChange[]>;
   private usageTracking: Map<string, UsageTracking>; // key: tenantId-month
+  private usageLedger: Map<string, UsageLedger>; // key: tenantId-requestId
+  private monthlyUsage: Map<string, MonthlyUsage>; // key: tenantId-period
   private currentTenantId: number;
   private currentAnalysisId: number;
   private currentMetaTagId: number;
   private currentRecommendationId: number;
   private currentPlanChangeId: number;
   private currentUsageId: number;
+  private currentLedgerId: number;
+  private currentMonthlyUsageId: number;
 
   constructor() {
     this.tenants = new Map();
@@ -53,12 +68,16 @@ export class MemStorage implements IStorage {
     this.recommendations = new Map();
     this.planChanges = new Map();
     this.usageTracking = new Map();
+    this.usageLedger = new Map();
+    this.monthlyUsage = new Map();
     this.currentTenantId = 1;
     this.currentAnalysisId = 1;
     this.currentMetaTagId = 1;
     this.currentRecommendationId = 1;
     this.currentPlanChangeId = 1;
     this.currentUsageId = 1;
+    this.currentLedgerId = 1;
+    this.currentMonthlyUsageId = 1;
     
     // Create default tenant for MVP
     this.createTenant("Default Tenant", "free");
@@ -244,6 +263,90 @@ export class MemStorage implements IStorage {
   async getCurrentUsage(tenantId: number, month: string): Promise<UsageTracking | undefined> {
     const key = `${tenantId}-${month}`;
     return this.usageTracking.get(key);
+  }
+
+  async createUsageLedgerEntry(entry: Omit<InsertUsageLedger, 'id'>): Promise<UsageLedger> {
+    const ledgerEntry: UsageLedger = {
+      id: this.currentLedgerId++,
+      tenantId: entry.tenantId,
+      requestId: entry.requestId,
+      auditType: entry.auditType || "meta_analysis",
+      status: entry.status || "enqueued",
+      url: entry.url || null,
+      userId: entry.userId || null,
+      period: entry.period,
+      enqueuedAt: new Date(),
+      completedAt: null,
+      failedAt: null
+    };
+    
+    const key = `${entry.tenantId}-${entry.requestId}`;
+    this.usageLedger.set(key, ledgerEntry);
+    
+    // Update monthly usage
+    await this.updateMonthlyUsage(entry.tenantId, entry.period);
+    
+    return ledgerEntry;
+  }
+
+  async getUsageLedgerEntry(tenantId: number, requestId: string): Promise<UsageLedger | undefined> {
+    const key = `${tenantId}-${requestId}`;
+    return this.usageLedger.get(key);
+  }
+
+  async updateUsageLedgerEntry(tenantId: number, requestId: string, status: 'completed' | 'failed'): Promise<void> {
+    const key = `${tenantId}-${requestId}`;
+    const entry = this.usageLedger.get(key);
+    
+    if (!entry) {
+      throw new Error(`Usage ledger entry not found: ${key}`);
+    }
+    
+    entry.status = status;
+    if (status === 'completed') {
+      entry.completedAt = new Date();
+    } else if (status === 'failed') {
+      entry.failedAt = new Date();
+    }
+    
+    this.usageLedger.set(key, entry);
+    
+    // Update monthly usage
+    await this.updateMonthlyUsage(tenantId, entry.period);
+  }
+
+  async getMonthlyUsage(tenantId: number, period: string): Promise<MonthlyUsage | undefined> {
+    const key = `${tenantId}-${period}`;
+    return this.monthlyUsage.get(key);
+  }
+
+  async updateMonthlyUsage(tenantId: number, period: string): Promise<void> {
+    const key = `${tenantId}-${period}`;
+    
+    // Count entries for this tenant and period
+    let enqueuedCount = 0;
+    let completedCount = 0;
+    let failedCount = 0;
+    
+    this.usageLedger.forEach(entry => {
+      if (entry.tenantId === tenantId && entry.period === period) {
+        enqueuedCount++;
+        if (entry.status === 'completed') completedCount++;
+        if (entry.status === 'failed') failedCount++;
+      }
+    });
+    
+    const usage: MonthlyUsage = {
+      id: this.currentMonthlyUsageId++,
+      tenantId,
+      period,
+      enqueuedCount,
+      completedCount,
+      failedCount,
+      lastUpdated: new Date()
+    };
+    
+    this.monthlyUsage.set(key, usage);
   }
 }
 

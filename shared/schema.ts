@@ -51,6 +51,32 @@ export const usageTracking = pgTable("usage_tracking", {
   exportCount: integer("export_count").notNull().default(0),
 });
 
+// Usage ledger for audit tracking with idempotency
+export const usageLedger = pgTable("usage_ledger", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull(),
+  requestId: text("request_id").notNull(), // for idempotency
+  auditType: text("audit_type").notNull().default("meta_analysis"),
+  status: text("status").notNull().default("enqueued"), // enqueued, completed, failed
+  url: text("url"),
+  userId: text("user_id"),
+  enqueuedAt: timestamp("enqueued_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  failedAt: timestamp("failed_at"),
+  period: text("period").notNull(), // YYYY-MM format
+});
+
+// Monthly usage summary for fast quota checks
+export const monthlyUsage = pgTable("monthly_usage", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull(),
+  period: text("period").notNull(), // YYYY-MM format
+  enqueuedCount: integer("enqueued_count").notNull().default(0),
+  completedCount: integer("completed_count").notNull().default(0),
+  failedCount: integer("failed_count").notNull().default(0),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+});
+
 // Meta tag model
 export const metaTags = pgTable("meta_tags", {
   id: serial("id").primaryKey(),
@@ -93,6 +119,8 @@ export const recommendations = pgTable("recommendations", {
 export const insertTenantSchema = createInsertSchema(tenants).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPlanChangeSchema = createInsertSchema(planChanges).omit({ id: true, timestamp: true });
 export const insertUsageTrackingSchema = createInsertSchema(usageTracking).omit({ id: true });
+export const insertUsageLedgerSchema = createInsertSchema(usageLedger).omit({ id: true, enqueuedAt: true, completedAt: true, failedAt: true });
+export const insertMonthlyUsageSchema = createInsertSchema(monthlyUsage).omit({ id: true, lastUpdated: true });
 export const insertMetaTagSchema = createInsertSchema(metaTags).omit({ id: true });
 export const insertAnalysisSchema = createInsertSchema(analyses).omit({ id: true });
 export const insertRecommendationSchema = createInsertSchema(recommendations).omit({ id: true });
@@ -101,12 +129,16 @@ export const insertRecommendationSchema = createInsertSchema(recommendations).om
 export type InsertTenant = z.infer<typeof insertTenantSchema>;
 export type InsertPlanChange = z.infer<typeof insertPlanChangeSchema>;
 export type InsertUsageTracking = z.infer<typeof insertUsageTrackingSchema>;
+export type InsertUsageLedger = z.infer<typeof insertUsageLedgerSchema>;
+export type InsertMonthlyUsage = z.infer<typeof insertMonthlyUsageSchema>;
 export type InsertMetaTag = z.infer<typeof insertMetaTagSchema>;
 export type InsertAnalysis = z.infer<typeof insertAnalysisSchema>;
 export type InsertRecommendation = z.infer<typeof insertRecommendationSchema>;
 export type Tenant = typeof tenants.$inferSelect;
 export type PlanChange = typeof planChanges.$inferSelect;
 export type UsageTracking = typeof usageTracking.$inferSelect;
+export type UsageLedger = typeof usageLedger.$inferSelect;
+export type MonthlyUsage = typeof monthlyUsage.$inferSelect;
 export type MetaTag = typeof metaTags.$inferSelect;
 export type Analysis = typeof analyses.$inferSelect;
 export type Recommendation = typeof recommendations.$inferSelect;
@@ -122,6 +154,7 @@ export type AnalysisResult = {
   analysis: Analysis;
   tags: MetaTag[];
   recommendations: Recommendation[];
+  quota?: QuotaStatus;
 };
 
 // Plan gating error types
@@ -134,6 +167,28 @@ export const PlanGatingError = z.object({
 });
 
 export type PlanGatingError = z.infer<typeof PlanGatingError>;
+
+// Quota status response
+export const QuotaStatus = z.object({
+  quotaRemaining: z.number(),
+  quotaUsed: z.number(),
+  quotaLimit: z.number(),
+  quotaPercentUsed: z.number(),
+  warningLevel: z.enum(["none", "warning_80", "warning_90", "exceeded"]),
+  period: z.string(),
+});
+
+export type QuotaStatus = z.infer<typeof QuotaStatus>;
+
+// Audit request with idempotency
+export const AuditRequest = z.object({
+  url: z.string().url(),
+  requestId: z.string().optional(), // for idempotency
+  auditType: z.string().default("meta_analysis"),
+  userId: z.string().optional(),
+});
+
+export type AuditRequest = z.infer<typeof AuditRequest>;
 
 // Tenant context for requests
 export const tenantContextSchema = z.object({

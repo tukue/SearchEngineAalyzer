@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for shared/schema.ts</title>
+    <title>Code coverage report for server/usage-limits.ts</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../prettify.css" />
     <link rel="stylesheet" href="../base.css" />
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../index.html">All files</a> / <a href="index.html">shared</a> schema.ts</h1>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">server</a> usage-limits.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">56.33% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>25/25</span>
+                <span class='fraction'>40/71</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">61.9% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>26/42</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">40% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>6/15</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">57.14% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>25/25</span>
+                <span class='fraction'>40/70</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line medium'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -262,26 +262,16 @@
 <a name='L197'></a><a href='#L197'>197</a>
 <a name='L198'></a><a href='#L198'>198</a>
 <a name='L199'></a><a href='#L199'>199</a>
-<a name='L200'></a><a href='#L200'>200</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L200'></a><a href='#L200'>200</a>
+<a name='L201'></a><a href='#L201'>201</a>
+<a name='L202'></a><a href='#L202'>202</a>
+<a name='L203'></a><a href='#L203'>203</a>
+<a name='L204'></a><a href='#L204'>204</a>
+<a name='L205'></a><a href='#L205'>205</a>
+<a name='L206'></a><a href='#L206'>206</a>
+<a name='L207'></a><a href='#L207'>207</a>
+<a name='L208'></a><a href='#L208'>208</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -291,6 +281,59 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">49x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">44x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">25x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">25x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -300,97 +343,34 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">24x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">26x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">26x</span>
+<span class="cline-any cline-yes">26x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">25x</span>
+<span class="cline-any cline-yes">25x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">24x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -400,8 +380,15 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">24x</span>
+<span class="cline-any cline-yes">24x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -415,6 +402,51 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -423,6 +455,17 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -433,234 +476,215 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Request, Response, NextFunction } from "express";
+import { 
+  TenantContext, 
+  QuotaStatus, 
+  PlanGatingError,
+  PLAN_CONFIGS,
+  AuditRequest 
+} from "@shared/schema";
+import { storage } from "./storage";
+// Simple UUID generator to avoid Jest module issues
+function <span class="fstat-no" title="function not covered" >generateUUID(</span>): string {
+<span class="cstat-no" title="statement not covered" >  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, <span class="fstat-no" title="function not covered" >function(c</span>) {</span>
+    const r = <span class="cstat-no" title="statement not covered" >Math.random() * 16 | 0;</span>
+    const v = <span class="cstat-no" title="statement not covered" >c == 'x' ? r : (r &amp; 0x3 | 0x8);</span>
+<span class="cstat-no" title="statement not covered" >    return v.toString(16);</span>
+  });
+}
 &nbsp;
-// Plan entitlements configuration
-export const PLAN_CONFIGS = {
-  free: {
-    monthlyAuditLimit: 10,
-    historyDepth: 5,
-    exportsEnabled: false,
-    webhooksEnabled: false,
-    apiAccessEnabled: false
-  },
-  pro: {
-    monthlyAuditLimit: 1000,
-    historyDepth: 100,
-    exportsEnabled: true,
-    webhooksEnabled: true,
-    apiAccessEnabled: true
+export class UsageLimitsService {
+  /**
+   * Get current quota status for a tenant
+   */
+  static async getQuotaStatus(tenantId: number, period?: string): Promise&lt;QuotaStatus&gt; {
+    const currentPeriod = period || new Date().toISOString().slice(0, 7); // YYYY-MM
+    const tenant = await storage.getTenant(tenantId);
+    
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!tenant) {
+<span class="cstat-no" title="statement not covered" >      throw new Error("Tenant not found");</span>
+    }
+&nbsp;
+    const quotaLimit = PLAN_CONFIGS[tenant.plan as keyof typeof PLAN_CONFIGS].monthlyAuditLimit;
+    const usage = await storage.getMonthlyUsage(tenantId, currentPeriod);
+    const quotaUsed = usage?.enqueuedCount || 0;
+    const quotaRemaining = Math.max(0, quotaLimit - quotaUsed);
+    const quotaPercentUsed = quotaLimit &gt; 0 ? (quotaUsed / quotaLimit) * 100 : <span class="branch-1 cbranch-no" title="branch not covered" >0;</span>
+&nbsp;
+    let warningLevel: "none" | "warning_80" | "warning_90" | "exceeded" = "none";
+    if (quotaPercentUsed &gt;= 100) {
+      warningLevel = "exceeded";
+    } else if (quotaPercentUsed &gt;= 90) {
+      warningLevel = "warning_90";
+    } else if (quotaPercentUsed &gt;= 80) {
+      warningLevel = "warning_80";
+    }
+&nbsp;
+    return {
+      quotaRemaining,
+      quotaUsed,
+      quotaLimit,
+      quotaPercentUsed: Math.round(quotaPercentUsed * 100) / 100,
+      warningLevel,
+      period: currentPeriod,
+    };
   }
-} as const;
 &nbsp;
-export type PlanType = keyof typeof PLAN_CONFIGS;
-export type PlanConfig = typeof PLAN_CONFIGS[PlanType];
+  /**
+   * Check if tenant can enqueue a new audit
+   */
+  static async canEnqueueAudit(tenantId: number): Promise&lt;{ allowed: boolean; quotaStatus: QuotaStatus; error?: PlanGatingError }&gt; {
+    const quotaStatus = await this.getQuotaStatus(tenantId);
+    
+    if (quotaStatus.quotaRemaining &lt;= 0) {
+      const tenant = await storage.getTenant(tenantId);
+      const error: PlanGatingError = {
+        code: "QUOTA_EXCEEDED",
+        feature: "monthlyAuditLimit",
+        currentPlan: tenant<span class="branch-0 cbranch-no" title="branch not covered" >?.p</span>lan || <span class="branch-1 cbranch-no" title="branch not covered" >"unknown",</span>
+        message: `Monthly audit quota exceeded. Used ${quotaStatus.quotaUsed}/${quotaStatus.quotaLimit} audits for ${quotaStatus.period}.`
+      };
+      
+      return { allowed: false, quotaStatus, error };
+    }
 &nbsp;
-// Tenants model
-export const tenants = pgTable("tenants", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  plan: text("plan").notNull().default("free"), // 'free' | 'pro'
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+    return { allowed: true, quotaStatus };
+  }
 &nbsp;
-// Plan change audit log
-export const planChanges = pgTable("plan_changes", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id").notNull(),
-  previousPlan: text("previous_plan").notNull(),
-  newPlan: text("new_plan").notNull(),
-  actorUserId: text("actor_user_id"),
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
-});
+  /**
+   * Reserve audit quota (enqueue with idempotency)
+   */
+  static async reserveAuditQuota(
+    tenantId: number, 
+    requestId: string, 
+    auditType: string = "meta_analysis",
+    url?: string,
+    userId?: string
+  ): Promise&lt;{ success: boolean; quotaStatus: QuotaStatus; error?: PlanGatingError }&gt; {
+    // Check for existing request (idempotency)
+    const existing = await storage.getUsageLedgerEntry(tenantId, requestId);
+    if (existing) {
+      const quotaStatus = await this.getQuotaStatus(tenantId);
+      return { success: true, quotaStatus };
+    }
 &nbsp;
-// Usage tracking for quotas
-export const usageTracking = pgTable("usage_tracking", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id").notNull(),
-  month: text("month").notNull(), // YYYY-MM format
-  auditCount: integer("audit_count").notNull().default(0),
-  exportCount: integer("export_count").notNull().default(0),
-});
+    // Check quota
+    const quotaCheck = await this.canEnqueueAudit(tenantId);
+    if (!quotaCheck.allowed) {
+      return { success: false, quotaStatus: quotaCheck.quotaStatus, error: quotaCheck.error };
+    }
 &nbsp;
-// Usage ledger for audit tracking with idempotency
-export const usageLedger = pgTable("usage_ledger", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id").notNull(),
-  requestId: text("request_id").notNull(), // for idempotency
-  auditType: text("audit_type").notNull().default("meta_analysis"),
-  status: text("status").notNull().default("enqueued"), // enqueued, completed, failed
-  url: text("url"),
-  userId: text("user_id"),
-  enqueuedAt: timestamp("enqueued_at").defaultNow().notNull(),
-  completedAt: timestamp("completed_at"),
-  failedAt: timestamp("failed_at"),
-  period: text("period").notNull(), // YYYY-MM format
-});
+    // Reserve quota
+    await storage.createUsageLedgerEntry({
+      tenantId,
+      requestId,
+      auditType,
+      status: "enqueued",
+      url: url || null,
+      userId: userId || null,
+      period: new Date().toISOString().slice(0, 7)
+    });
 &nbsp;
-// Monthly usage summary for fast quota checks
-export const monthlyUsage = pgTable("monthly_usage", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id").notNull(),
-  period: text("period").notNull(), // YYYY-MM format
-  enqueuedCount: integer("enqueued_count").notNull().default(0),
-  completedCount: integer("completed_count").notNull().default(0),
-  failedCount: integer("failed_count").notNull().default(0),
-  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
-});
+    const updatedQuotaStatus = await this.getQuotaStatus(tenantId);
+    return { success: true, quotaStatus: updatedQuotaStatus };
+  }
 &nbsp;
-// Meta tag model
-export const metaTags = pgTable("meta_tags", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id").notNull(),
-  url: text("url").notNull(),
-  name: text("name"),
-  property: text("property"),
-  content: text("content"),
-  httpEquiv: text("http_equiv"),
-  charset: text("charset"),
-  rel: text("rel"),
-  tagType: text("tag_type").notNull(), // SEO, Social, Technical
-  isPresent: boolean("is_present").notNull().default(true),
-});
+  /**
+   * Mark audit as completed
+   */
+  static async completeAudit(tenantId: number, requestId: string): Promise&lt;void&gt; {
+    await storage.updateUsageLedgerEntry(tenantId, requestId, "completed");
+  }
 &nbsp;
-// Analysis results model
-export const analyses = pgTable("analyses", {
-  id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id").notNull(),
-  url: text("url").notNull(),
-  totalCount: integer("total_count").notNull(),
-  seoCount: integer("seo_count").notNull(),
-  socialCount: integer("social_count").notNull(),
-  technicalCount: integer("technical_count").notNull(),
-  missingCount: integer("missing_count").notNull(),
-  healthScore: integer("health_score").notNull(),
-  timestamp: text("timestamp").notNull(),
-});
+  /**
+   * Mark audit as failed
+   */
+  static async failAudit(tenantId: number, requestId: string): Promise&lt;void&gt; {
+    await storage.updateUsageLedgerEntry(tenantId, requestId, "failed");
+  }
 &nbsp;
-// Recommendation model
-export const recommendations = pgTable("recommendations", {
-  id: serial("id").primaryKey(),
-  analysisId: integer("analysis_id").notNull(),
-  tagName: text("tag_name").notNull(),
-  description: text("description").notNull(),
-  example: text("example").notNull(),
-});
+  /**
+   * Generate request ID for idempotency
+   */
+<span class="fstat-no" title="function not covered" >  static </span>generateRequestId(): string {
+<span class="cstat-no" title="statement not covered" >    return generateUUID();</span>
+  }
+}
 &nbsp;
-// Insert schemas
-export const insertTenantSchema = createInsertSchema(tenants).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertPlanChangeSchema = createInsertSchema(planChanges).omit({ id: true, timestamp: true });
-export const insertUsageTrackingSchema = createInsertSchema(usageTracking).omit({ id: true });
-export const insertUsageLedgerSchema = createInsertSchema(usageLedger).omit({ id: true, enqueuedAt: true, completedAt: true, failedAt: true });
-export const insertMonthlyUsageSchema = createInsertSchema(monthlyUsage).omit({ id: true, lastUpdated: true });
-export const insertMetaTagSchema = createInsertSchema(metaTags).omit({ id: true });
-export const insertAnalysisSchema = createInsertSchema(analyses).omit({ id: true });
-export const insertRecommendationSchema = createInsertSchema(recommendations).omit({ id: true });
+/**
+ * Middleware to check and reserve audit quota
+ */
+export function <span class="fstat-no" title="function not covered" >checkAndReserveQuota(</span>) {
+<span class="cstat-no" title="statement not covered" >  return <span class="fstat-no" title="function not covered" >async (r</span>eq: Request, res: Response, next: NextFunction) =&gt;<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" > {</span></span></span>
+    const tenantContext = <span class="cstat-no" title="statement not covered" >req.tenantContext as TenantContext;</span>
+    
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (!tenantContext) {</span>
+<span class="cstat-no" title="statement not covered" >      return res.status(401).json({ message: "Tenant context required" });</span>
+    }
 &nbsp;
-// Types
-export type InsertTenant = z.infer&lt;typeof insertTenantSchema&gt;;
-export type InsertPlanChange = z.infer&lt;typeof insertPlanChangeSchema&gt;;
-export type InsertUsageTracking = z.infer&lt;typeof insertUsageTrackingSchema&gt;;
-export type InsertUsageLedger = z.infer&lt;typeof insertUsageLedgerSchema&gt;;
-export type InsertMonthlyUsage = z.infer&lt;typeof insertMonthlyUsageSchema&gt;;
-export type InsertMetaTag = z.infer&lt;typeof insertMetaTagSchema&gt;;
-export type InsertAnalysis = z.infer&lt;typeof insertAnalysisSchema&gt;;
-export type InsertRecommendation = z.infer&lt;typeof insertRecommendationSchema&gt;;
-export type Tenant = typeof tenants.$inferSelect;
-export type PlanChange = typeof planChanges.$inferSelect;
-export type UsageTracking = typeof usageTracking.$inferSelect;
-export type UsageLedger = typeof usageLedger.$inferSelect;
-export type MonthlyUsage = typeof monthlyUsage.$inferSelect;
-export type MetaTag = typeof metaTags.$inferSelect;
-export type Analysis = typeof analyses.$inferSelect;
-export type Recommendation = typeof recommendations.$inferSelect;
+    // Generate or use provided request ID for idempotency
+    const requestId = <span class="cstat-no" title="statement not covered" >req.body.requestId || UsageLimitsService.generateRequestId();</span>
+    const auditType = <span class="cstat-no" title="statement not covered" >req.body.auditType || "meta_analysis";</span>
+    const url = <span class="cstat-no" title="statement not covered" >req.body.url;</span>
+    const userId = <span class="cstat-no" title="statement not covered" >req.body.userId;</span>
 &nbsp;
-// Request and response type for analysis
-export const urlSchema = z.object({
-  url: z.string().url("Please enter a valid URL"),
-});
+<span class="cstat-no" title="statement not covered" >    try {</span>
+      const result = <span class="cstat-no" title="statement not covered" >await UsageLimitsService.reserveAuditQuota(</span>
+        tenantContext.tenantId,
+        requestId,
+        auditType,
+        url,
+        userId
+      );
 &nbsp;
-export type UrlRequest = z.infer&lt;typeof urlSchema&gt;;
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!result.success) {</span>
+<span class="cstat-no" title="statement not covered" >        return res.status(429).json({</span>
+          ...result.error,
+          quota: result.quotaStatus
+        });
+      }
 &nbsp;
-export type AnalysisResult = {
-  analysis: Analysis;
-  tags: MetaTag[];
-  recommendations: Recommendation[];
-  quota?: QuotaStatus;
-};
+      // Add quota info and request ID to request for downstream use
+<span class="cstat-no" title="statement not covered" >      req.quotaStatus = result.quotaStatus;</span>
+<span class="cstat-no" title="statement not covered" >      req.auditRequestId = requestId;</span>
 &nbsp;
-// Plan gating error types
-export const PlanGatingError = z.object({
-  code: z.enum(["PLAN_UPGRADE_REQUIRED", "QUOTA_EXCEEDED", "FEATURE_NOT_AVAILABLE"]),
-  feature: z.string(),
-  currentPlan: z.string(),
-  requiredPlan: z.string().optional(),
-  message: z.string(),
-});
+<span class="cstat-no" title="statement not covered" >      next();</span>
+    } catch (error) {
+<span class="cstat-no" title="statement not covered" >      console.error("Error checking quota:", error);</span>
+<span class="cstat-no" title="statement not covered" >      res.status(500).json({ message: "Failed to check quota" });</span>
+    }
+  };
+}
 &nbsp;
-export type PlanGatingError = z.infer&lt;typeof PlanGatingError&gt;;
+/**
+ * Middleware to add quota status to responses
+ */
+export function <span class="fstat-no" title="function not covered" >addQuotaToResponse(</span>) {
+<span class="cstat-no" title="statement not covered" >  return <span class="fstat-no" title="function not covered" >(r</span>eq: Request, res: Response, next: NextFunction) =&gt; {</span>
+    const originalJson = <span class="cstat-no" title="statement not covered" >res.json;</span>
+    
+<span class="cstat-no" title="statement not covered" >    res.json = <span class="fstat-no" title="function not covered" >function(b</span>ody: any) {</span>
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (req.quotaStatus &amp;&amp; typeof body === 'object' &amp;&amp; body !== null) {</span>
+<span class="cstat-no" title="statement not covered" >        body.quota = req.quotaStatus;</span>
+      }
+<span class="cstat-no" title="statement not covered" >      return originalJson.call(this, body);</span>
+    };
 &nbsp;
-// Quota status response
-export const QuotaStatus = z.object({
-  quotaRemaining: z.number(),
-  quotaUsed: z.number(),
-  quotaLimit: z.number(),
-  quotaPercentUsed: z.number(),
-  warningLevel: z.enum(["none", "warning_80", "warning_90", "exceeded"]),
-  period: z.string(),
-});
+<span class="cstat-no" title="statement not covered" >    next();</span>
+  };
+}
 &nbsp;
-export type QuotaStatus = z.infer&lt;typeof QuotaStatus&gt;;
-&nbsp;
-// Audit request with idempotency
-export const AuditRequest = z.object({
-  url: z.string().url(),
-  requestId: z.string().optional(), // for idempotency
-  auditType: z.string().default("meta_analysis"),
-  userId: z.string().optional(),
-});
-&nbsp;
-export type AuditRequest = z.infer&lt;typeof AuditRequest&gt;;
-&nbsp;
-// Tenant context for requests
-export const tenantContextSchema = z.object({
-  tenantId: z.number(),
-  plan: z.enum(["free", "pro"]),
-});
-&nbsp;
-export type TenantContext = z.infer&lt;typeof tenantContextSchema&gt;;
-&nbsp;</pre></td></tr></table></pre>
+// Extend Express Request type
+declare global {
+  namespace Express {
+    interface Request {
+      quotaStatus?: QuotaStatus;
+      auditRequestId?: string;
+    }
+  }
+}</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->
