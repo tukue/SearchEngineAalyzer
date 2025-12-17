@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { PLAN_CONFIGS, PlanType, TenantContext, PlanGatingError } from "@shared/schema";
+import { UsageLimitsService } from "./usage-limits";
+import { storage } from "./storage";
 
 // Plan gating service
 export class PlanGatingService {
@@ -54,7 +56,7 @@ export function requireEntitlement(feature: keyof typeof PLAN_CONFIGS.free) {
   };
 }
 
-// Middleware to check quota limits
+// Middleware to check quota limits (legacy - use checkAndReserveQuota from usage-limits instead)
 export function checkQuota(quotaType: "monthlyAuditLimit") {
   return async (req: Request, res: Response, next: NextFunction) => {
     const tenantContext = req.tenantContext as TenantContext;
@@ -63,23 +65,29 @@ export function checkQuota(quotaType: "monthlyAuditLimit") {
       return res.status(401).json({ message: "Tenant context required" });
     }
 
-    const limit = PlanGatingService.getQuotaLimit(tenantContext, quotaType);
-    const currentUsage = await getCurrentUsage(tenantContext.tenantId, quotaType);
+    try {
+      const quotaCheck = await UsageLimitsService.canEnqueueAudit(tenantContext.tenantId);
+      
+      if (!quotaCheck.allowed) {
+        return res.status(429).json({
+          ...quotaCheck.error,
+          quota: quotaCheck.quotaStatus
+        });
+      }
 
-    if (currentUsage >= limit) {
-      const error = PlanGatingService.createQuotaError(
-        quotaType,
-        tenantContext.plan
-      );
-      return res.status(403).json(error);
+      // Add quota status to request for downstream use
+      req.quotaStatus = quotaCheck.quotaStatus;
+      next();
+    } catch (error) {
+      console.error("Error checking quota:", error);
+      res.status(500).json({ message: "Failed to check quota" });
     }
-
-    next();
   };
 }
 
 // Helper function to get current usage
 async function getCurrentUsage(tenantId: number, quotaType: string): Promise<number> {
+<<<<<<< HEAD
   const { storage } = await import('./storage');
   const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
   const usage = await storage.getCurrentUsage(tenantId, currentMonth);
@@ -89,6 +97,11 @@ async function getCurrentUsage(tenantId: number, quotaType: string): Promise<num
   }
   
   return 0;
+=======
+  const period = new Date().toISOString().slice(0, 7);
+  const usage = await storage.getMonthlyUsage(tenantId, period);
+  return usage?.enqueuedCount || 0;
+>>>>>>> origin/main
 }
 
 // Extend Express Request type
