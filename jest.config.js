@@ -23,5 +23,13 @@ export default {
       useESM: true,
     }]
   },
-  extensionsToTreatAsEsm: ['.ts', '.tsx']
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
+  transformIgnorePatterns: [
+    'node_modules/(?!(node-fetch|fetch-blob|data-uri-to-buffer|formdata-polyfill)/)',
+  ],
+  globals: {
+    'ts-jest': {
+      useESM: true
+    }
+  }
 };
