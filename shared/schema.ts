@@ -56,6 +56,7 @@ export const metaTags = pgTable("meta_tags", {
   id: serial("id").primaryKey(),
   tenantId: integer("tenant_id").notNull(),
   url: text("url").notNull(),
+  tenantId: text("tenant_id").notNull().default(""),
   name: text("name"),
   property: text("property"),
   content: text("content"),
@@ -69,7 +70,9 @@ export const metaTags = pgTable("meta_tags", {
 // Analysis results model
 export const analyses = pgTable("analyses", {
   id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id").notNull(),
+  tenantId: text("tenant_id").notNull().default(""),
+  userId: text("user_id").notNull().default(""),
+  auditType: text("audit_type").notNull().default("meta"),
   url: text("url").notNull(),
   totalCount: integer("total_count").notNull(),
   seoCount: integer("seo_count").notNull(),
@@ -83,6 +86,7 @@ export const analyses = pgTable("analyses", {
 // Recommendation model
 export const recommendations = pgTable("recommendations", {
   id: serial("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().default(""),
   analysisId: integer("analysis_id").notNull(),
   tagName: text("tag_name").notNull(),
   description: text("description").notNull(),
@@ -122,6 +126,32 @@ export type AnalysisResult = {
   analysis: Analysis;
   tags: MetaTag[];
   recommendations: Recommendation[];
+  recentAnalyses?: Analysis[];
+  usage?: UsageSnapshot;
+  plan?: Plan;
+};
+
+export type PlanId = "free" | "pro";
+
+export type Plan = {
+  id: PlanId;
+  label: string;
+  monthlyQuota: number;
+  features: {
+    exports: boolean;
+    historyDepth: number;
+    webhooks: boolean;
+  };
+};
+
+export type UsageSnapshot = {
+  tenantId: string;
+  month: string;
+  count: number;
+  limit: number;
+  remaining: number;
+  warnings: string[];
+  planId: PlanId;
 };
 
 // Plan gating error types
