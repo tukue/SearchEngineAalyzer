@@ -42,8 +42,8 @@ Workers re-validate payload from the queue to avoid trusting producer input.
 
 ## Idempotency & De-duplication
 
-- **Key derivation**: `idempotencyKey = hash(tenantId + auditType + normalizedUrl + requestId)`.
-  - If the client provides a stable `requestId`, duplicates always map to the same run. Without a requestId, generate one and also store a short sliding window key `tenantId|auditType|url|roundDown(now,15m)` to collapse accidental double clicks.
+- **Key derivation**: `idempotencyKey = hash(tenantId + "|" + auditType + "|" + normalizedUrl + "|" + requestId)`.
+  - If the client provides a stable `requestId`, duplicates always map to the same run. Without a requestId, generate one and also store a short sliding window key `tenantId|auditType|url|roundDown(now,15m)` to collapse accidental double clicks while avoiding delimiter-related hash collisions.
 - **Storage**: Redis set holding `{idempotencyKey -> runId}` with TTL 24h. Run metadata persisted in `audit_runs` table (runId, status, timestamps, tenantId, userId, requestId, auditType, url, lastError, attemptCount).
 - **Behavior**: enqueue checks Redis; if a runId exists, return that run reference (status fetched from DB) without enqueuing a new job. On first enqueue, write the key with runId before pushing to queue, ensuring workers will not execute duplicates even on retries.
 
@@ -116,7 +116,7 @@ async function processAuditJob(job) {
 
   // claim run
   const run = await runsRepo.get(runIdFrom(job));
-  if (!run || run.status === 'succeeded') return run; // safety against duplicates
+  if (!run || run.status === 'succeeded' || run.status === 'processing') return run; // safety against duplicates
 
   await runsRepo.markProcessing(run.id, attempt(job));
   const started = Date.now();
@@ -137,7 +137,7 @@ async function processAuditJob(job) {
       attempt: attempt(job),
       errorCategory: categorize(err),
       retryable,
-      lastError: err.message,
+      lastError: sanitizeErrorMessage(err),
     });
 
     if (!retryable) throw new NonRetryableError(err);
