@@ -35,7 +35,7 @@ Canonical payload validated at enqueue and worker start:
 
 Validation rules:
 - `tenantId`, `userId`, `requestId`: non-empty strings (UUID-formatted).
-- `url`: absolute HTTP/HTTPS URL; normalize by prepending `https://` when missing scheme.
+- `url`: absolute HTTP/HTTPS URL; validate against an allowlist (or blocklist of private/internal IP ranges + localhost) prior to normalization; only then normalize by prepending `https://` when the scheme is missing.
 - `auditType`: enumerated string.
 
 Workers re-validate payload from the queue to avoid trusting producer input.
@@ -107,6 +107,9 @@ Response:
 async function processAuditJob(job) {
   const payload = validatePayload(job.data); // zod schema
   const { tenantId, userId, url, auditType, requestId } = payload;
+
+  // URL safety guardrail (defense in depth)
+  assertPublicHttpUrl(url, { allowlist });
 
   // tenant scoping
   assertTenantContext(job, tenantId);
