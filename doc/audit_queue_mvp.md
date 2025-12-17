@@ -35,14 +35,14 @@ Canonical payload validated at enqueue and worker start:
 
 Validation rules:
 - `tenantId`, `userId`, `requestId`: non-empty strings (UUID-formatted).
-- `url`: absolute HTTP/HTTPS URL; validate against an allowlist (or blocklist of private/internal IP ranges + localhost) prior to normalization; only then normalize by prepending `https://` when the scheme is missing.
+- `url`: absolute HTTP/HTTPS URL; validate against an allowlist (or blocklist of private/internal IP ranges + localhost) prior to normalization; only then normalize by prepending `https://` when the scheme is missing. Perform DNS resolution/IP extraction and reject if the resolved IP is private/loopback/link-local to close DNS-rebinding SSRF tricks.
 - `auditType`: enumerated string.
 
 Workers re-validate payload from the queue to avoid trusting producer input.
 
 ## Idempotency & De-duplication
 
-- **Key derivation**: `idempotencyKey = hash(tenantId + "|" + auditType + "|" + normalizedUrl + "|" + requestId)`.
+- **Key derivation**: `idempotencyKey = sha256(tenantId + "|" + auditType + "|" + normalizedUrl + "|" + requestId)` using a delimiter and a strong hash (or HMAC) to eliminate concatenation collisions and downgrade risks from weak digests.
   - If the client provides a stable `requestId`, duplicates always map to the same run. Without a requestId, generate one and also store a short sliding window key `tenantId|auditType|url|roundDown(now,15m)` to collapse accidental double clicks while avoiding delimiter-related hash collisions.
 - **Storage**: Redis set holding `{idempotencyKey -> runId}` with TTL 24h. Run metadata persisted in `audit_runs` table (runId, status, timestamps, tenantId, userId, requestId, auditType, url, lastError, attemptCount).
 - **Behavior**: enqueue checks Redis; if a runId exists, return that run reference (status fetched from DB) without enqueuing a new job. On first enqueue, write the key with runId before pushing to queue, ensuring workers will not execute duplicates even on retries.
@@ -53,7 +53,7 @@ Statuses surfaced to clients: `queued`, `processing`, `succeeded`, `failed`.
 
 State transitions:
 - `queued` (upon accepted enqueue) → `processing` (worker claim) → `succeeded` (on completion) or `failed` (non-retryable or max-attempts exceeded).
-- Store `attemptCount`, `startedAt`, `finishedAt`, `durationMs`, `errorCategory`, `lastError`.
+- Store `attemptCount`, `startedAt`, `finishedAt`, `durationMs`, `errorCategory`, `lastError` (sanitized to remove stack traces/PII/internal endpoints before persistence or logging).
 
 ## API Contracts
 
@@ -137,7 +137,7 @@ async function processAuditJob(job) {
       attempt: attempt(job),
       errorCategory: categorize(err),
       retryable,
-      lastError: sanitizeErrorMessage(err),
+      lastError: sanitizeErrorMessage(err), // strips stack traces, secrets, internal URLs
     });
 
     if (!retryable) throw new NonRetryableError(err);
