@@ -5,53 +5,153 @@ import {
   type InsertMetaTag,
   type InsertAnalysis, 
   type InsertRecommendation,
-  type AnalysisResult
+  type AnalysisResult,
+  type Tenant,
+  type TenantContext,
+  type PlanChange,
+  type UsageTracking,
+  type UsageLedger,
+  type MonthlyUsage,
+  type InsertUsageLedger,
+  type InsertMonthlyUsage,
+  PLAN_CONFIGS
 } from "@shared/schema";
 
 // Interface for storage operations
 export interface IStorage {
-  createAnalysis(analysisData: AnalysisResult): Promise<AnalysisResult>;
-  getAnalysis(id: number, tenantId: string): Promise<AnalysisResult | undefined>;
-  getAnalysisByUrl(url: string, tenantId: string): Promise<AnalysisResult | undefined>;
-  getRecentAnalyses(tenantId: string, url?: string, limit?: number): Promise<Analysis[]>;
+  // Tenant operations
+  createTenant(name: string, plan?: string): Promise<Tenant>;
+  getTenant(id: number): Promise<Tenant | undefined>;
+  updateTenantPlan(tenantId: number, newPlan: string, actorUserId?: string): Promise<void>;
+  
+  // Analysis operations (tenant-scoped)
+  createAnalysis(tenantId: number, analysisData: Omit<AnalysisResult, 'analysis'> & { analysis: Omit<Analysis, 'id' | 'tenantId'> }): Promise<AnalysisResult>;
+  getAnalysis(tenantId: number, id: number): Promise<AnalysisResult | undefined>;
+  getAnalysisByUrl(tenantId: number, url: string): Promise<AnalysisResult | undefined>;
+  getAnalysisHistory(tenantId: number, limit?: number): Promise<Analysis[]>;
+  
+  // Usage tracking (legacy)
+  incrementUsage(tenantId: number, type: 'audit' | 'export'): Promise<void>;
+  getCurrentUsage(tenantId: number, month: string): Promise<UsageTracking | undefined>;
+  
+  // Usage ledger (new)
+  createUsageLedgerEntry(entry: Omit<InsertUsageLedger, 'id'>): Promise<UsageLedger>;
+  getUsageLedgerEntry(tenantId: number, requestId: string): Promise<UsageLedger | undefined>;
+  updateUsageLedgerEntry(tenantId: number, requestId: string, status: 'completed' | 'failed'): Promise<void>;
+  getMonthlyUsage(tenantId: number, period: string): Promise<MonthlyUsage | undefined>;
+  updateMonthlyUsage(tenantId: number, period: string): Promise<void>;
+  
+  // Atomic operations
+  atomicQuotaReservation(entry: Omit<InsertUsageLedger, 'id'>): Promise<{ success: boolean; quotaStatus: any; quotaUsed?: number; quotaLimit?: number; period?: string }>;
+  releaseQuotaReservation(tenantId: number, requestId: string): Promise<void>;
+  cleanupExpiredQuotaReservations(tenantId: number, olderThanHours: number): Promise<number>;
 }
 
 // Memory storage implementation
 export class MemStorage implements IStorage {
+  private tenants: Map<number, Tenant>;
   private analyses: Map<number, Analysis>;
   private metaTags: Map<number, MetaTag[]>;
   private recommendations: Map<number, Recommendation[]>;
+  private planChanges: Map<number, PlanChange[]>;
+  private usageTracking: Map<string, UsageTracking>; // key: tenantId-month
+  private usageLedger: Map<string, UsageLedger>; // key: tenantId-requestId
+  private monthlyUsage: Map<string, MonthlyUsage>; // key: tenantId-period
+  private currentTenantId: number;
   private currentAnalysisId: number;
   private currentMetaTagId: number;
   private currentRecommendationId: number;
+  private currentPlanChangeId: number;
+  private currentUsageId: number;
+  private currentLedgerId: number;
+  private currentMonthlyUsageId: number;
 
   constructor() {
+    this.tenants = new Map();
     this.analyses = new Map();
     this.metaTags = new Map();
     this.recommendations = new Map();
+    this.planChanges = new Map();
+    this.usageTracking = new Map();
+    this.usageLedger = new Map();
+    this.monthlyUsage = new Map();
+    this.currentTenantId = 1;
     this.currentAnalysisId = 1;
     this.currentMetaTagId = 1;
     this.currentRecommendationId = 1;
+    this.currentPlanChangeId = 1;
+    this.currentUsageId = 1;
+    this.currentLedgerId = 1;
+    this.currentMonthlyUsageId = 1;
+    
+    // Create default tenant for MVP
+    this.createTenant("Default Tenant", "free");
   }
 
-  async createAnalysis(analysisData: AnalysisResult): Promise<AnalysisResult> {
+  async createTenant(name: string, plan: string = "free"): Promise<Tenant> {
+    const tenantId = this.currentTenantId++;
+    const tenant: Tenant = {
+      id: tenantId,
+      name,
+      plan,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    this.tenants.set(tenantId, tenant);
+    this.planChanges.set(tenantId, []);
+    
+    return tenant;
+  }
+
+  async getTenant(id: number): Promise<Tenant | undefined> {
+    return this.tenants.get(id);
+  }
+
+  async updateTenantPlan(tenantId: number, newPlan: string, actorUserId?: string): Promise<void> {
+    const tenant = this.tenants.get(tenantId);
+    if (!tenant) throw new Error("Tenant not found");
+    
+    const previousPlan = tenant.plan;
+    tenant.plan = newPlan;
+    tenant.updatedAt = new Date();
+    
+    // Log plan change
+    const planChange: PlanChange = {
+      id: this.currentPlanChangeId++,
+      tenantId,
+      previousPlan,
+      newPlan,
+      actorUserId: actorUserId || null,
+      timestamp: new Date()
+    };
+    
+    const changes = this.planChanges.get(tenantId) || [];
+    changes.push(planChange);
+    this.planChanges.set(tenantId, changes);
+    
+    console.log(`Plan changed for tenant ${tenantId}: ${previousPlan} -> ${newPlan}`);
+  }
+
+  async createAnalysis(tenantId: number, analysisData: Omit<AnalysisResult, 'analysis'> & { analysis: Omit<Analysis, 'id' | 'tenantId'> }): Promise<AnalysisResult> {
     const analysisId = this.currentAnalysisId++;
     
     // Store the analysis
     const analysis: Analysis = {
       ...analysisData.analysis,
       id: analysisId,
+      tenantId
     };
     
     this.analyses.set(analysisId, analysis);
     
     // Store the meta tags
-    const tags: MetaTag[] = analysisData.tags.map((tag) => {
+    const tags: MetaTag[] = analysisData.tags.map(tag => {
       const metaTagId = this.currentMetaTagId++;
       return {
         id: metaTagId,
+        tenantId,
         url: analysis.url,
-        tenantId: analysis.tenantId,
         name: tag.name || null,
         property: tag.property || null,
         content: tag.content || null,
@@ -59,22 +159,21 @@ export class MemStorage implements IStorage {
         charset: tag.charset || null,
         rel: tag.rel || null,
         tagType: tag.tagType,
-        isPresent: tag.isPresent,
+        isPresent: tag.isPresent
       };
     });
     
     this.metaTags.set(analysisId, tags);
     
     // Store the recommendations
-    const recs: Recommendation[] = analysisData.recommendations.map((rec) => {
+    const recs: Recommendation[] = analysisData.recommendations.map(rec => {
       const recId = this.currentRecommendationId++;
       return {
         id: recId,
-        tenantId: analysis.tenantId,
         analysisId,
         tagName: rec.tagName,
         description: rec.description,
-        example: rec.example,
+        example: rec.example
       };
     });
     
@@ -84,11 +183,11 @@ export class MemStorage implements IStorage {
     return {
       analysis,
       tags,
-      recommendations: recs,
+      recommendations: recs
     };
   }
 
-  async getAnalysis(id: number, tenantId: string): Promise<AnalysisResult | undefined> {
+  async getAnalysis(tenantId: number, id: number): Promise<AnalysisResult | undefined> {
     const analysis = this.analyses.get(id);
     if (!analysis || analysis.tenantId !== tenantId) return undefined;
     
@@ -98,19 +197,18 @@ export class MemStorage implements IStorage {
     return {
       analysis,
       tags,
-      recommendations,
+      recommendations
     };
   }
 
-  async getAnalysisByUrl(url: string, tenantId: string): Promise<AnalysisResult | undefined> {
+  async getAnalysisByUrl(tenantId: number, url: string): Promise<AnalysisResult | undefined> {
     // Find analysis by URL
     let analysisId: number | undefined;
     let foundAnalysis: Analysis | undefined;
-
+    
     // Use forEach instead of for...of to avoid iterator issues
     this.analyses.forEach((analysis, id) => {
-      const matchesTenant = analysis.tenantId === tenantId;
-      if (analysis.url === url && matchesTenant && !foundAnalysis) {
+      if (analysis.url === url && analysis.tenantId === tenantId && !foundAnalysis) {
         analysisId = id;
         foundAnalysis = analysis;
       }
@@ -124,24 +222,246 @@ export class MemStorage implements IStorage {
     return {
       analysis: foundAnalysis,
       tags,
-      recommendations,
+      recommendations
     };
   }
 
-  async getRecentAnalyses(tenantId: string, url?: string, limit = 5): Promise<Analysis[]> {
-    const items = Array.from(this.analyses.values()).filter((analysis) => {
-      const matchesTenant = analysis.tenantId === tenantId;
-      const matchesUrl = url ? analysis.url === url : true;
-      return matchesTenant && matchesUrl;
+  async getAnalysisHistory(tenantId: number, limit?: number): Promise<Analysis[]> {
+    const analyses: Analysis[] = [];
+    
+    this.analyses.forEach(analysis => {
+      if (analysis.tenantId === tenantId) {
+        analyses.push(analysis);
+      }
     });
+    
+    // Sort by timestamp descending
+    analyses.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    return limit ? analyses.slice(0, limit) : analyses;
+  }
 
-    return items
-      .map((analysis) => ({ analysis, timestamp: new Date(analysis.timestamp).getTime() }))
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, limit)
-      .map((item) => item.analysis);
+  async incrementUsage(tenantId: number, type: 'audit' | 'export'): Promise<void> {
+    const month = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const key = `${tenantId}-${month}`;
+    
+    let usage = this.usageTracking.get(key);
+    if (!usage) {
+      usage = {
+        id: this.currentUsageId++,
+        tenantId,
+        month,
+        auditCount: 0,
+        exportCount: 0
+      };
+    }
+    
+    if (type === 'audit') {
+      usage.auditCount++;
+    } else if (type === 'export') {
+      usage.exportCount++;
+    }
+    
+    this.usageTracking.set(key, usage);
+  }
+
+  async getCurrentUsage(tenantId: number, month: string): Promise<UsageTracking | undefined> {
+    const key = `${tenantId}-${month}`;
+    return this.usageTracking.get(key);
+  }
+
+  async createUsageLedgerEntry(entry: Omit<InsertUsageLedger, 'id'>): Promise<UsageLedger> {
+    const ledgerEntry: UsageLedger = {
+      id: this.currentLedgerId++,
+      tenantId: entry.tenantId,
+      requestId: entry.requestId,
+      auditType: entry.auditType || "meta_analysis",
+      status: entry.status || "enqueued",
+      url: entry.url || null,
+      userId: entry.userId || null,
+      period: entry.period,
+      enqueuedAt: new Date(),
+      completedAt: null,
+      failedAt: null
+    };
+    
+    const key = `${entry.tenantId}-${entry.requestId}`;
+    this.usageLedger.set(key, ledgerEntry);
+    
+    // Update monthly usage
+    await this.updateMonthlyUsage(entry.tenantId, entry.period);
+    
+    return ledgerEntry;
+  }
+
+  async getUsageLedgerEntry(tenantId: number, requestId: string): Promise<UsageLedger | undefined> {
+    const key = `${tenantId}-${requestId}`;
+    return this.usageLedger.get(key);
+  }
+
+  async updateUsageLedgerEntry(tenantId: number, requestId: string, status: 'completed' | 'failed'): Promise<void> {
+    const key = `${tenantId}-${requestId}`;
+    const entry = this.usageLedger.get(key);
+    
+    if (!entry) {
+      throw new Error(`Usage ledger entry not found: ${key}`);
+    }
+    
+    entry.status = status;
+    if (status === 'completed') {
+      entry.completedAt = new Date();
+    } else if (status === 'failed') {
+      entry.failedAt = new Date();
+    }
+    
+    this.usageLedger.set(key, entry);
+    
+    // Update monthly usage
+    await this.updateMonthlyUsage(tenantId, entry.period);
+  }
+
+  async getMonthlyUsage(tenantId: number, period: string): Promise<MonthlyUsage | undefined> {
+    const key = `${tenantId}-${period}`;
+    return this.monthlyUsage.get(key);
+  }
+
+  async updateMonthlyUsage(tenantId: number, period: string): Promise<void> {
+    const key = `${tenantId}-${period}`;
+    
+    // Count entries for this tenant and period
+    let enqueuedCount = 0;
+    let completedCount = 0;
+    let failedCount = 0;
+    
+    this.usageLedger.forEach(entry => {
+      if (entry.tenantId === tenantId && entry.period === period) {
+        enqueuedCount++;
+        if (entry.status === 'completed') completedCount++;
+        if (entry.status === 'failed') failedCount++;
+      }
+    });
+    
+    const usage: MonthlyUsage = {
+      id: this.currentMonthlyUsageId++,
+      tenantId,
+      period,
+      enqueuedCount,
+      completedCount,
+      failedCount,
+      lastUpdated: new Date()
+    };
+    
+    this.monthlyUsage.set(key, usage);
+  }
+
+  async atomicQuotaReservation(entry: Omit<InsertUsageLedger, 'id'>): Promise<{ success: boolean; quotaStatus: any; quotaUsed?: number; quotaLimit?: number; period?: string }> {
+    // Get tenant and quota limit
+    const tenant = await this.getTenant(entry.tenantId);
+    if (!tenant) {
+      throw new Error("Tenant not found");
+    }
+
+    const quotaLimit = PLAN_CONFIGS[tenant.plan as keyof typeof PLAN_CONFIGS].monthlyAuditLimit;
+    const currentUsage = await this.getMonthlyUsage(entry.tenantId, entry.period);
+    const quotaUsed = currentUsage?.enqueuedCount || 0;
+
+    // Check if quota would be exceeded
+    if (quotaUsed >= quotaLimit) {
+      const quotaStatus = {
+        quotaRemaining: 0,
+        quotaUsed,
+        quotaLimit,
+        quotaPercentUsed: 100,
+        warningLevel: "exceeded" as const,
+        period: entry.period
+      };
+      return { success: false, quotaStatus, quotaUsed, quotaLimit, period: entry.period };
+    }
+
+    // Reserve quota atomically
+    await this.createUsageLedgerEntry(entry);
+    
+    const updatedUsage = await this.getMonthlyUsage(entry.tenantId, entry.period);
+    const newQuotaUsed = updatedUsage?.enqueuedCount || 0;
+    const quotaRemaining = Math.max(0, quotaLimit - newQuotaUsed);
+    const quotaPercentUsed = quotaLimit > 0 ? (newQuotaUsed / quotaLimit) * 100 : 0;
+
+    let warningLevel: "none" | "warning_80" | "warning_90" | "exceeded" = "none";
+    if (quotaPercentUsed >= 100) {
+      warningLevel = "exceeded";
+    } else if (quotaPercentUsed >= 90) {
+      warningLevel = "warning_90";
+    } else if (quotaPercentUsed >= 80) {
+      warningLevel = "warning_80";
+    }
+
+    const quotaStatus = {
+      quotaRemaining,
+      quotaUsed: newQuotaUsed,
+      quotaLimit,
+      quotaPercentUsed: Math.round(quotaPercentUsed * 100) / 100,
+      warningLevel,
+      period: entry.period
+    };
+
+    return { success: true, quotaStatus };
+  }
+
+  async releaseQuotaReservation(tenantId: number, requestId: string): Promise<void> {
+    const key = `${tenantId}-${requestId}`;
+    const entry = this.usageLedger.get(key);
+    
+    if (entry) {
+      // Remove the entry to release quota
+      this.usageLedger.delete(key);
+      // Update monthly usage
+      await this.updateMonthlyUsage(tenantId, entry.period);
+    }
+  }
+
+  async cleanupExpiredQuotaReservations(tenantId: number, olderThanHours: number): Promise<number> {
+    const cutoffTime = new Date(Date.now() - (olderThanHours * 60 * 60 * 1000));
+    let cleanedCount = 0;
+    
+    const toDelete: string[] = [];
+    
+    this.usageLedger.forEach((entry, key) => {
+      if (entry.tenantId === tenantId && 
+          entry.status === 'enqueued' && 
+          entry.enqueuedAt < cutoffTime) {
+        toDelete.push(key);
+        cleanedCount++;
+      }
+    });
+    
+    // Delete expired entries
+    toDelete.forEach(key => {
+      const entry = this.usageLedger.get(key);
+      if (entry) {
+        this.usageLedger.delete(key);
+        // Update monthly usage for each cleaned entry
+        this.updateMonthlyUsage(tenantId, entry.period).catch(err => 
+          console.error('Failed to update monthly usage during cleanup:', err)
+        );
+      }
+    });
+    
+    return cleanedCount;
   }
 }
 
 // Export storage instance
 export const storage = new MemStorage();
+
+// Helper function to get default tenant context for MVP
+export async function getDefaultTenantContext(): Promise<TenantContext> {
+  const tenant = await storage.getTenant(1); // Default tenant
+  if (!tenant) {
+    throw new Error("Default tenant not found");
+  }
+  
+  return {
+    tenantId: tenant.id,
+    plan: tenant.plan as "free" | "pro"
+  };
+}
