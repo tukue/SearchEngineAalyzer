@@ -15,20 +15,10 @@ import {
 
 // Interface for storage operations
 export interface IStorage {
-  // Tenant operations
-  createTenant(name: string, plan?: string): Promise<Tenant>;
-  getTenant(id: number): Promise<Tenant | undefined>;
-  updateTenantPlan(tenantId: number, newPlan: string, actorUserId?: string): Promise<void>;
-  
-  // Analysis operations (tenant-scoped)
-  createAnalysis(tenantId: number, analysisData: Omit<AnalysisResult, 'analysis'> & { analysis: Omit<Analysis, 'id' | 'tenantId'> }): Promise<AnalysisResult>;
-  getAnalysis(tenantId: number, id: number): Promise<AnalysisResult | undefined>;
-  getAnalysisByUrl(tenantId: number, url: string): Promise<AnalysisResult | undefined>;
-  getAnalysisHistory(tenantId: number, limit?: number): Promise<Analysis[]>;
-  
-  // Usage tracking
-  incrementUsage(tenantId: number, type: 'audit' | 'export'): Promise<void>;
-  getCurrentUsage(tenantId: number, month: string): Promise<UsageTracking | undefined>;
+  createAnalysis(analysisData: AnalysisResult): Promise<AnalysisResult>;
+  getAnalysis(id: number, tenantId: string): Promise<AnalysisResult | undefined>;
+  getAnalysisByUrl(url: string, tenantId: string): Promise<AnalysisResult | undefined>;
+  getRecentAnalyses(tenantId: string, url?: string, limit?: number): Promise<Analysis[]>;
 }
 
 // Memory storage implementation
@@ -116,18 +106,18 @@ export class MemStorage implements IStorage {
     const analysis: Analysis = {
       ...analysisData.analysis,
       id: analysisId,
-      tenantId
     };
     
     this.analyses.set(analysisId, analysis);
     
     // Store the meta tags
-    const tags: MetaTag[] = analysisData.tags.map(tag => {
+    const tags: MetaTag[] = analysisData.tags.map((tag) => {
       const metaTagId = this.currentMetaTagId++;
       return {
         id: metaTagId,
         tenantId,
         url: analysis.url,
+        tenantId: analysis.tenantId,
         name: tag.name || null,
         property: tag.property || null,
         content: tag.content || null,
@@ -135,21 +125,22 @@ export class MemStorage implements IStorage {
         charset: tag.charset || null,
         rel: tag.rel || null,
         tagType: tag.tagType,
-        isPresent: tag.isPresent
+        isPresent: tag.isPresent,
       };
     });
     
     this.metaTags.set(analysisId, tags);
     
     // Store the recommendations
-    const recs: Recommendation[] = analysisData.recommendations.map(rec => {
+    const recs: Recommendation[] = analysisData.recommendations.map((rec) => {
       const recId = this.currentRecommendationId++;
       return {
         id: recId,
+        tenantId: analysis.tenantId,
         analysisId,
         tagName: rec.tagName,
         description: rec.description,
-        example: rec.example
+        example: rec.example,
       };
     });
     
@@ -159,11 +150,11 @@ export class MemStorage implements IStorage {
     return {
       analysis,
       tags,
-      recommendations: recs
+      recommendations: recs,
     };
   }
 
-  async getAnalysis(tenantId: number, id: number): Promise<AnalysisResult | undefined> {
+  async getAnalysis(id: number, tenantId: string): Promise<AnalysisResult | undefined> {
     const analysis = this.analyses.get(id);
     if (!analysis || analysis.tenantId !== tenantId) return undefined;
     
@@ -173,18 +164,21 @@ export class MemStorage implements IStorage {
     return {
       analysis,
       tags,
-      recommendations
+      recommendations,
     };
   }
 
   async getAnalysisByUrl(tenantId: number, url: string): Promise<AnalysisResult | undefined> {
+  async getAnalysisByUrl(url: string, tenantId: string): Promise<AnalysisResult | undefined> {
     // Find analysis by URL
     let analysisId: number | undefined;
     let foundAnalysis: Analysis | undefined;
-    
+
     // Use forEach instead of for...of to avoid iterator issues
     this.analyses.forEach((analysis, id) => {
       if (analysis.url === url && analysis.tenantId === tenantId && !foundAnalysis) {
+      const matchesTenant = analysis.tenantId === tenantId;
+      if (analysis.url === url && matchesTenant && !foundAnalysis) {
         analysisId = id;
         foundAnalysis = analysis;
       }
@@ -198,7 +192,7 @@ export class MemStorage implements IStorage {
     return {
       analysis: foundAnalysis,
       tags,
-      recommendations
+      recommendations,
     };
   }
 
@@ -244,6 +238,18 @@ export class MemStorage implements IStorage {
   async getCurrentUsage(tenantId: number, month: string): Promise<UsageTracking | undefined> {
     const key = `${tenantId}-${month}`;
     return this.usageTracking.get(key);
+  async getRecentAnalyses(tenantId: string, url?: string, limit = 5): Promise<Analysis[]> {
+    const items = Array.from(this.analyses.values()).filter((analysis) => {
+      const matchesTenant = analysis.tenantId === tenantId;
+      const matchesUrl = url ? analysis.url === url : true;
+      return matchesTenant && matchesUrl;
+    });
+
+    return items
+      .map((analysis) => ({ analysis, timestamp: new Date(analysis.timestamp).getTime() }))
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, limit)
+      .map((item) => item.analysis);
   }
 }
 
