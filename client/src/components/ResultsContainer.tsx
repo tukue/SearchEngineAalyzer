@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DownloadIcon, Search, MessageSquare, Code, AlertTriangle } from "lucide-react";
+import { DownloadIcon, Search, MessageSquare, Code, AlertTriangle, BarChart3, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,9 @@ export default function ResultsContainer({ isVisible, results }: ResultsContaine
   if (!isVisible || !results) return null;
 
   const { analysis, tags, recommendations } = results;
+  const recentAnalyses = results.recentAnalyses || [];
+  const usage = results.usage;
+  const plan = results.plan;
 
   // Function to determine the color of the health score
   const getHealthScoreColor = (score: number) => {
@@ -44,6 +47,16 @@ export default function ResultsContainer({ isVisible, results }: ResultsContaine
     if (score >= 50) return "secondary";
     if (score >= 30) return "outline";
     return "destructive";
+  };
+
+  const formatRunTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   // Function to filter tags based on active tab
@@ -83,8 +96,8 @@ export default function ResultsContainer({ isVisible, results }: ResultsContaine
             <p className="text-slate-600">{analysis.url}</p>
           </div>
           <div className="mt-3 sm:mt-0">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary bg-blue-50 hover:bg-blue-100"
               onClick={handleExport}
             >
@@ -164,14 +177,57 @@ export default function ResultsContainer({ isVisible, results }: ResultsContaine
                 </span>
               </div>
             </div>
-            <Progress 
-              value={analysis.healthScore} 
-              className="h-2 bg-slate-200" 
+            <Progress
+              value={analysis.healthScore}
+              className="h-2 bg-slate-200"
               indicatorClassName={getHealthScoreColor(analysis.healthScore)}
             />
           </div>
         </div>
       </div>
+
+      {(usage || plan) && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+          {plan && (
+            <div className="bg-white rounded-lg shadow-md p-4 flex items-center">
+              <div className="flex-shrink-0 bg-indigo-50 rounded-md p-3">
+                <BarChart3 className="h-6 w-6 text-indigo-500" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm text-slate-500">Plan</p>
+                <p className="text-lg font-semibold text-slate-800">{plan.label}</p>
+                <p className="text-xs text-slate-500">History depth: {plan.features.historyDepth} runs</p>
+              </div>
+            </div>
+          )}
+
+          {usage && (
+            <div className="bg-white rounded-lg shadow-md p-4 lg:col-span-2">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm text-slate-500">Monthly audits</p>
+                  <p className="text-lg font-semibold text-slate-800">{usage.count} / {usage.limit}</p>
+                </div>
+                <Badge variant={usage.remaining > 0 ? "secondary" : "destructive"}>
+                  {usage.remaining} remaining
+                </Badge>
+              </div>
+              <Progress
+                value={(usage.count / usage.limit) * 100}
+                className="h-2"
+                indicatorClassName={usage.remaining > 0 ? "bg-primary" : "bg-red-500"}
+              />
+              {usage.warnings.length > 0 && (
+                <ul className="mt-2 text-xs text-amber-600 list-disc list-inside">
+                  {usage.warnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tag Categories Tabs */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
@@ -220,6 +276,42 @@ export default function ResultsContainer({ isVisible, results }: ResultsContaine
       {/* Recommendations Section */}
       {recommendations.length > 0 && (
         <RecommendationsList recommendations={recommendations} />
+      )}
+
+      {recentAnalyses.length > 0 && (
+        <div className="bg-white rounded-lg shadow-md p-6 mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-slate-500" />
+              <h3 className="text-lg font-semibold text-slate-800">Recent runs</h3>
+            </div>
+            <Badge variant="outline">Last {recentAnalyses.length}</Badge>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead>
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Run</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Health</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Missing</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">When</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {recentAnalyses.map((run) => (
+                  <tr key={`${run.id}-${run.timestamp}`}>
+                    <td className="px-4 py-3 text-sm text-slate-800">{run.url}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant={getScoreBadgeVariant(run.healthScore)}>{run.healthScore}%</Badge>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{run.missingCount}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{formatRunTimestamp(run.timestamp)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );
