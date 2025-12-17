@@ -130,7 +130,7 @@ function trimToRange(text, min, max):
 **Behavior:**
 - Loads audit scoped to the authenticated tenant. Return `404` if the run does not belong to the tenant or does not exist.
 - Checks plan entitlements: Free plans can view the blueprint but cannot export/copy-all (UI should disable actions and the API omits export tokens). Pro plans can copy/export.
-- Returns `204` with `{ "isEmpty": true }` when there are no meta-related findings.
+- Returns `200` with `{ "isEmpty": true }` when there are no meta-related findings.
 - Targets sub-500ms latency post-audit by reusing stored findings and page content extracted during the run.
 
 **Successful Response (Pro plan):**
@@ -184,7 +184,7 @@ function trimToRange(text, min, max):
    - Long titles/descriptions are truncated to max lengths; short ones are padded per template rules.
 2. **Finding Mapping**
    - Each recommended field includes the finding IDs that triggered it; verify traceability in responses.
-   - Requests with no meta findings return `204` and `isEmpty: true`.
+   - Requests with no meta findings return `200` and `isEmpty: true`.
 3. **Plan Gating**
    - Free plan: endpoint returns blueprint with `canCopy=false`, `canExport=false`; UI disables copy buttons and shows upgrade tooltip.
    - Pro plan: `canCopy=true`, `canExport=true`; copy buttons emit usage metrics.

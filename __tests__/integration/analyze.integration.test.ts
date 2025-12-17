@@ -1,6 +1,6 @@
 import http from 'http';
 import request from 'supertest';
-import type { IncomingMessage, ServerResponse } from 'http';
+import type { IncomingMessage, Server, ServerResponse } from 'http';
 import handler from '../../api/index';
 import fetch from 'node-fetch';
 
@@ -21,13 +21,18 @@ const createServer = () =>
   });
 
 describe('Analyze endpoint integration', () => {
+  let server: Server;
+
   beforeEach(() => {
     fetchMock.mockReset();
+    server = createServer();
+  });
+
+  afterEach(() => {
+    server.close();
   });
 
   it('rejects invalid URL payloads with a validation error', async () => {
-    const server = createServer();
-
     const res = await request(server)
       .post('/api/analyze')
       .send({ url: 'not-a-valid-url' })
@@ -47,8 +52,6 @@ describe('Analyze endpoint integration', () => {
       url: 'https://example.com/missing'
     } as any);
 
-    const server = createServer();
-
     const res = await request(server)
       .post('/api/analyze')
       .send({ url: 'https://example.com/missing' })
@@ -60,8 +63,6 @@ describe('Analyze endpoint integration', () => {
 
   it('returns a 400 when the remote site cannot be reached', async () => {
     fetchMock.mockRejectedValue(new Error('connect ETIMEDOUT'));
-
-    const server = createServer();
 
     const res = await request(server)
       .post('/api/analyze')
@@ -92,8 +93,6 @@ describe('Analyze endpoint integration', () => {
       headers: new Headers({ 'content-type': 'text/html' }),
       url: 'https://example.com/minimal'
     } as any);
-
-    const server = createServer();
 
     const res = await request(server)
       .post('/api/analyze')

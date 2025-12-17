@@ -5,8 +5,7 @@
     "module": "CommonJS",
     "moduleResolution": "Node",
     "isolatedModules": true,
-    "types": ["jest", "node"],
-    "allowImportingTsExtensions": true
+    "types": ["jest", "node"]
   },
   "include": ["./**/*.ts", "./**/*.tsx"],
   "exclude": ["node_modules", "dist", "build"]

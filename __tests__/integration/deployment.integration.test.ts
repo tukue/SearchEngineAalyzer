@@ -9,8 +9,15 @@ jest.mock('node-fetch', () => ({ __esModule: true, default: jest.fn() }));
 const fetchMock = fetch as jest.MockedFunction<typeof fetch>;
 
 describe('Vercel deployment API integration', () => {
+  let server: http.Server;
+
   beforeEach(() => {
     fetchMock.mockReset();
+    server = createServer();
+  });
+
+  afterEach(() => {
+    server.close();
   });
 
   const createServer = () =>
@@ -24,8 +31,6 @@ describe('Vercel deployment API integration', () => {
     });
 
   it('serves JSON for the health route instead of raw source', async () => {
-    const server = createServer();
-
     const res = await request(server).get('/api/health');
 
     expect(res.status).toBe(200);
@@ -73,8 +78,6 @@ describe('Vercel deployment API integration', () => {
       headers: new Headers({ 'content-type': 'text/html' }),
       url: 'https://example.com'
     } as any);
-
-    const server = createServer();
 
     const res = await request(server)
       .post('/api/analyze')
