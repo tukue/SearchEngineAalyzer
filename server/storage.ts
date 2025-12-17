@@ -40,6 +40,11 @@ export interface IStorage {
   updateUsageLedgerEntry(tenantId: number, requestId: string, status: 'completed' | 'failed'): Promise<void>;
   getMonthlyUsage(tenantId: number, period: string): Promise<MonthlyUsage | undefined>;
   updateMonthlyUsage(tenantId: number, period: string): Promise<void>;
+  
+  // Atomic operations
+  atomicQuotaReservation(entry: Omit<InsertUsageLedger, 'id'>): Promise<{ success: boolean; quotaStatus: any; quotaUsed?: number; quotaLimit?: number; period?: string }>;
+  releaseQuotaReservation(tenantId: number, requestId: string): Promise<void>;
+  cleanupExpiredQuotaReservations(tenantId: number, olderThanHours: number): Promise<number>;
 }
 
 // Memory storage implementation
@@ -347,6 +352,101 @@ export class MemStorage implements IStorage {
     };
     
     this.monthlyUsage.set(key, usage);
+  }
+
+  async atomicQuotaReservation(entry: Omit<InsertUsageLedger, 'id'>): Promise<{ success: boolean; quotaStatus: any; quotaUsed?: number; quotaLimit?: number; period?: string }> {
+    // Get tenant and quota limit
+    const tenant = await this.getTenant(entry.tenantId);
+    if (!tenant) {
+      throw new Error("Tenant not found");
+    }
+
+    const quotaLimit = PLAN_CONFIGS[tenant.plan as keyof typeof PLAN_CONFIGS].monthlyAuditLimit;
+    const currentUsage = await this.getMonthlyUsage(entry.tenantId, entry.period);
+    const quotaUsed = currentUsage?.enqueuedCount || 0;
+
+    // Check if quota would be exceeded
+    if (quotaUsed >= quotaLimit) {
+      const quotaStatus = {
+        quotaRemaining: 0,
+        quotaUsed,
+        quotaLimit,
+        quotaPercentUsed: 100,
+        warningLevel: "exceeded" as const,
+        period: entry.period
+      };
+      return { success: false, quotaStatus, quotaUsed, quotaLimit, period: entry.period };
+    }
+
+    // Reserve quota atomically
+    await this.createUsageLedgerEntry(entry);
+    
+    const updatedUsage = await this.getMonthlyUsage(entry.tenantId, entry.period);
+    const newQuotaUsed = updatedUsage?.enqueuedCount || 0;
+    const quotaRemaining = Math.max(0, quotaLimit - newQuotaUsed);
+    const quotaPercentUsed = quotaLimit > 0 ? (newQuotaUsed / quotaLimit) * 100 : 0;
+
+    let warningLevel: "none" | "warning_80" | "warning_90" | "exceeded" = "none";
+    if (quotaPercentUsed >= 100) {
+      warningLevel = "exceeded";
+    } else if (quotaPercentUsed >= 90) {
+      warningLevel = "warning_90";
+    } else if (quotaPercentUsed >= 80) {
+      warningLevel = "warning_80";
+    }
+
+    const quotaStatus = {
+      quotaRemaining,
+      quotaUsed: newQuotaUsed,
+      quotaLimit,
+      quotaPercentUsed: Math.round(quotaPercentUsed * 100) / 100,
+      warningLevel,
+      period: entry.period
+    };
+
+    return { success: true, quotaStatus };
+  }
+
+  async releaseQuotaReservation(tenantId: number, requestId: string): Promise<void> {
+    const key = `${tenantId}-${requestId}`;
+    const entry = this.usageLedger.get(key);
+    
+    if (entry) {
+      // Remove the entry to release quota
+      this.usageLedger.delete(key);
+      // Update monthly usage
+      await this.updateMonthlyUsage(tenantId, entry.period);
+    }
+  }
+
+  async cleanupExpiredQuotaReservations(tenantId: number, olderThanHours: number): Promise<number> {
+    const cutoffTime = new Date(Date.now() - (olderThanHours * 60 * 60 * 1000));
+    let cleanedCount = 0;
+    
+    const toDelete: string[] = [];
+    
+    this.usageLedger.forEach((entry, key) => {
+      if (entry.tenantId === tenantId && 
+          entry.status === 'enqueued' && 
+          entry.enqueuedAt < cutoffTime) {
+        toDelete.push(key);
+        cleanedCount++;
+      }
+    });
+    
+    // Delete expired entries
+    toDelete.forEach(key => {
+      const entry = this.usageLedger.get(key);
+      if (entry) {
+        this.usageLedger.delete(key);
+        // Update monthly usage for each cleaned entry
+        this.updateMonthlyUsage(tenantId, entry.period).catch(err => 
+          console.error('Failed to update monthly usage during cleanup:', err)
+        );
+      }
+    });
+    
+    return cleanedCount;
   }
 }
 

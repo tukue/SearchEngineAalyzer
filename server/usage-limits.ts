@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { randomUUID } from "crypto";
 import { 
   TenantContext, 
   QuotaStatus, 
@@ -7,14 +8,6 @@ import {
   AuditRequest 
 } from "@shared/schema";
 import { storage } from "./storage";
-// Simple UUID generator to avoid Jest module issues
-function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
 
 export class UsageLimitsService {
   /**
@@ -75,7 +68,7 @@ export class UsageLimitsService {
   }
 
   /**
-   * Reserve audit quota (enqueue with idempotency)
+   * Reserve audit quota (enqueue with idempotency) - Atomic operation
    */
   static async reserveAuditQuota(
     tenantId: number, 
@@ -91,25 +84,34 @@ export class UsageLimitsService {
       return { success: true, quotaStatus };
     }
 
-    // Check quota
-    const quotaCheck = await this.canEnqueueAudit(tenantId);
-    if (!quotaCheck.allowed) {
-      return { success: false, quotaStatus: quotaCheck.quotaStatus, error: quotaCheck.error };
+    // Atomic quota check and reservation
+    try {
+      const result = await storage.atomicQuotaReservation({
+        tenantId,
+        requestId,
+        auditType,
+        url: url || null,
+        userId: userId || null,
+        period: new Date().toISOString().slice(0, 7)
+      });
+
+      if (!result.success) {
+        const tenant = await storage.getTenant(tenantId);
+        const error: PlanGatingError = {
+          code: "QUOTA_EXCEEDED",
+          feature: "monthlyAuditLimit",
+          currentPlan: tenant?.plan || "unknown",
+          message: `Monthly audit quota exceeded. Used ${result.quotaUsed}/${result.quotaLimit} audits for ${result.period}.`
+        };
+        
+        return { success: false, quotaStatus: result.quotaStatus, error };
+      }
+
+      return { success: true, quotaStatus: result.quotaStatus };
+    } catch (error) {
+      console.error('Atomic quota reservation failed:', error);
+      throw error;
     }
-
-    // Reserve quota
-    await storage.createUsageLedgerEntry({
-      tenantId,
-      requestId,
-      auditType,
-      status: "enqueued",
-      url: url || null,
-      userId: userId || null,
-      period: new Date().toISOString().slice(0, 7)
-    });
-
-    const updatedQuotaStatus = await this.getQuotaStatus(tenantId);
-    return { success: true, quotaStatus: updatedQuotaStatus };
   }
 
   /**
@@ -120,17 +122,39 @@ export class UsageLimitsService {
   }
 
   /**
-   * Mark audit as failed
+   * Mark audit as failed and clean up reserved quota
    */
-  static async failAudit(tenantId: number, requestId: string): Promise<void> {
-    await storage.updateUsageLedgerEntry(tenantId, requestId, "failed");
+  static async failAudit(tenantId: number, requestId: string, releaseQuota: boolean = true): Promise<void> {
+    try {
+      await storage.updateUsageLedgerEntry(tenantId, requestId, "failed");
+      
+      // Optionally release quota for failed audits to prevent quota leakage
+      if (releaseQuota) {
+        await storage.releaseQuotaReservation(tenantId, requestId);
+      }
+    } catch (error) {
+      console.error(`Failed to mark audit as failed for tenant ${tenantId}, request ${requestId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clean up abandoned or expired quota reservations
+   */
+  static async cleanupExpiredReservations(tenantId: number, olderThanHours: number = 24): Promise<number> {
+    try {
+      return await storage.cleanupExpiredQuotaReservations(tenantId, olderThanHours);
+    } catch (error) {
+      console.error(`Failed to cleanup expired reservations for tenant ${tenantId}:`, error);
+      throw error;
+    }
   }
 
   /**
    * Generate request ID for idempotency
    */
   static generateRequestId(): string {
-    return generateUUID();
+    return randomUUID();
   }
 }
 
@@ -171,9 +195,27 @@ export function checkAndReserveQuota() {
       req.quotaStatus = result.quotaStatus;
       req.auditRequestId = requestId;
 
+      // Add error cleanup handler to response
+      const originalEnd = res.end;
+      res.end = function(chunk?: any, encoding?: any) {
+        // If response failed (5xx) and we have a request ID, mark audit as failed
+        if (res.statusCode >= 500 && req.auditRequestId) {
+          UsageLimitsService.failAudit(tenantContext.tenantId, req.auditRequestId, true)
+            .catch(err => console.error('Failed to cleanup quota on error:', err));
+        }
+        return originalEnd.call(this, chunk, encoding);
+      };
+
       next();
     } catch (error) {
       console.error("Error checking quota:", error);
+      
+      // If we had a request ID but failed after reservation, try to clean up
+      if (req.auditRequestId) {
+        UsageLimitsService.failAudit(tenantContext.tenantId, req.auditRequestId, true)
+          .catch(err => console.error('Failed to cleanup quota after error:', err));
+      }
+      
       res.status(500).json({ message: "Failed to check quota" });
     }
   };
