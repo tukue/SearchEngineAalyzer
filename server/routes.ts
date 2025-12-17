@@ -120,13 +120,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-<<<<<<< HEAD
-  // Analyze URL endpoint with quota checking
-  apiRouter.post("/analyze", checkQuota('monthlyAuditLimit'), async (req, res) => {
-    try {
-      // Validate URL
-      const { url } = urlSchema.parse(req.body);
-=======
   // Analyze URL endpoint with quota checking and reservation
   apiRouter.post("/analyze", checkAndReserveQuota(), addQuotaToResponse(), async (req, res) => {
     const tenantContext = req.tenantContext as TenantContext;
@@ -136,7 +129,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request
       const auditRequest = AuditRequest.parse(req.body);
       const { url } = auditRequest;
->>>>>>> origin/main
       
       let normalizedUrl = url;
       if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
