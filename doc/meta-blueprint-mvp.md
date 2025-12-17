@@ -131,6 +131,7 @@ function trimToRange(text, min, max):
 - Loads audit scoped to the authenticated tenant. Return `404` if the run does not belong to the tenant or does not exist.
 - Checks plan entitlements: Free plans can view the blueprint but cannot export/copy-all (UI should disable actions and the API omits export tokens). Pro plans can copy/export.
 - Returns `200` with `{ "isEmpty": true }` when there are no meta-related findings.
+- Avoid `204 No Content` responses with a payload; if an empty state needs signaling, return `200` with the empty blueprint payload.
 - Targets sub-500ms latency post-audit by reusing stored findings and page content extracted during the run.
 
 **Successful Response (Pro plan):**
