@@ -1,6 +1,6 @@
 import http from 'http';
 import request from 'supertest';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { IncomingMessage, ServerResponse } from 'http';
 import handler from '../../api/index';
 import fetch from 'node-fetch';
 
@@ -15,8 +15,11 @@ describe('Vercel deployment API integration', () => {
 
   const createServer = () =>
     http.createServer((req, res) => {
-      const vercelReq = Object.assign(req, { query: {}, body: undefined }) as VercelRequest;
-      const vercelRes = res as VercelResponse;
+      const vercelReq = Object.assign(req, { query: {}, body: undefined }) as IncomingMessage & {
+        query: Record<string, string>;
+        body: unknown;
+      };
+      const vercelRes = res as ServerResponse;
       return handler(vercelReq, vercelRes);
     });
 
