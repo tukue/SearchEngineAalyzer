@@ -78,10 +78,16 @@ export function checkQuota(quotaType: "monthlyAuditLimit") {
   };
 }
 
-// Helper function to get current usage (simplified for MVP)
+// Helper function to get current usage
 async function getCurrentUsage(tenantId: number, quotaType: string): Promise<number> {
-  // In a real implementation, this would query the usage tracking table
-  // For MVP, we'll return 0 to allow all requests
+  const { storage } = await import('./storage');
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const usage = await storage.getCurrentUsage(tenantId, currentMonth);
+  
+  if (quotaType === 'monthlyAuditLimit') {
+    return usage?.auditCount || 0;
+  }
+  
   return 0;
 }
 

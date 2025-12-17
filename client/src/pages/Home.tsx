@@ -37,6 +37,16 @@ export default function Home() {
   const { planInfo, loading: planLoading } = usePlanInfo();
   const { error: planError, handleError, ErrorComponent } = usePlanGatingErrorHandler();
 
+  // Helper function for handling plan gating errors
+  const handlePlanGatingError = (err: any, fallbackHandler: (err: any) => void) => {
+    const errorData = err.response?.data || err;
+    if (errorData?.code && ['PLAN_UPGRADE_REQUIRED', 'QUOTA_EXCEEDED', 'FEATURE_NOT_AVAILABLE'].includes(errorData.code)) {
+      handleError(errorData);
+    } else {
+      fallbackHandler(err);
+    }
+  };
+
   // Load search history from localStorage when component mounts
   useEffect(() => {
     const storedHistory = localStorage.getItem('metaTagAnalyzerHistory');
@@ -91,16 +101,13 @@ export default function Home() {
       });
     },
     onError: (err: any) => {
-      // Handle plan gating errors
-      if (err.code && ['PLAN_UPGRADE_REQUIRED', 'QUOTA_EXCEEDED', 'FEATURE_NOT_AVAILABLE'].includes(err.code)) {
-        handleError(err);
-      } else {
+      handlePlanGatingError(err, (err) => {
         toast({
           variant: "destructive",
           title: "Analysis Failed",
           description: err.message || "An unexpected error occurred",
         });
-      }
+      });
     },
   });
 
@@ -122,15 +129,13 @@ export default function Home() {
       });
     },
     onError: (err: any) => {
-      if (err.code && ['PLAN_UPGRADE_REQUIRED', 'QUOTA_EXCEEDED', 'FEATURE_NOT_AVAILABLE'].includes(err.code)) {
-        handleError(err);
-      } else {
+      handlePlanGatingError(err, (err) => {
         toast({
           variant: "destructive",
           title: "Export Failed",
           description: err.message || "Failed to export analysis",
         });
-      }
+      });
     }
   });
   

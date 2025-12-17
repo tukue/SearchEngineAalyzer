@@ -16,10 +16,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware to add tenant context (simplified for MVP - uses default tenant)
   apiRouter.use(async (req, res, next) => {
     try {
+      // In production, extract tenant from JWT token or request headers
       req.tenantContext = await getDefaultTenantContext();
       next();
     } catch (error) {
-      res.status(500).json({ message: "Failed to load tenant context" });
+      console.error('Failed to load tenant context:', error);
+      // Differentiate between authentication and system errors
+      if (error instanceof Error && error.message.includes('not found')) {
+        res.status(401).json({ message: "Authentication required" });
+      } else {
+        res.status(500).json({ message: "System error occurred" });
+      }
     }
   });
 
