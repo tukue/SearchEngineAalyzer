@@ -12,16 +12,16 @@ Concise documentation of the MVP features that remain to be implemented for the 
 
 ### 1) URL Intake with SSRF Guardrails (P0)
 - **Why it matters:** Protects infrastructure from internal network access and bad inputs.
-- **Scope:** Reject non-HTTP/HTTPS, private/loopback/reserved IPs; enforce fetch timeout and max body size.
-- **Minimal implementation:** Add middleware to normalize and validate URLs; perform DNS resolve + IP check; enforce HTTPS; set request timeout and size limits.
-- **Verification:** Submit invalid, private, and valid URLs; confirm 400 for blocked targets and 202/200 for valid ones.
+- **Scope:** Reject non-HTTP/HTTPS, private/loopback/reserved IPs (IPv4/IPv6); enforce fetch timeout and max body size; validate redirect chains to avoid protocol downgrade and private-target hops.
+- **Minimal implementation:** Add middleware to normalize and validate URLs; perform DNS resolve + IP check for IPv4/IPv6; enforce HTTPS; set request timeout and size limits; cap redirect hops and reject protocol downgrades.
+- **Verification:** Submit invalid, private, and valid URLs; confirm 400 for blocked targets and 202/200 for valid ones; test redirect chains to private IPs and HTTPS→HTTP downgrades are blocked.
 - **Likely files:** `server/routes/audits.ts`, `server/middleware/validateUrl.ts`, `server/config/security.ts`.
 
 ### 2) Auth Gate for Write Paths (P0)
 - **Why it matters:** Prevents anonymous usage and enables tenant scoping for quotas/history.
-- **Scope:** Token/API-key or session auth on POST routes (submit/rerun/export), tenant/user context passed downstream.
-- **Minimal implementation:** Add auth middleware; reject missing/invalid tokens; inject `tenantId/userId` into handlers.
-- **Verification:** Call write endpoints with/without valid token; ensure tenant context is stored with audits.
+- **Scope:** Token/API-key or session auth on POST routes (submit/rerun/export), tenant/user context passed downstream; secure token validation and storage with rotation/expiration.
+- **Minimal implementation:** Add auth middleware with JWT/API-key validation (HMAC/RS256); reject missing/invalid/expired tokens; inject `tenantId/userId` into handlers; store secrets in a secrets manager or env only at boot and rotate keys periodically.
+- **Verification:** Call write endpoints with/without valid token; ensure tenant context is stored with audits; verify expired/rotated tokens are rejected.
 - **Likely files:** `server/middleware/auth.ts`, `server/routes/*.ts`, `server/config/auth.ts`.
 
 ### 3) Audit Execution Stability (P0)
@@ -33,9 +33,9 @@ Concise documentation of the MVP features that remain to be implemented for the 
 
 ### 4) Persistent Audit Records & History (P0)
 - **Why it matters:** Enables report retrieval, rerun, and quota accuracy after restarts.
-- **Scope:** Store audit record with status, timestamps, scores, issues, raw payload; list endpoint with pagination.
-- **Minimal implementation:** Wire Drizzle/Postgres repository; replace MemStorage in runtime; add list route with limit/offset or cursor.
-- **Verification:** Submit audits, restart server, confirm history persists; verify pagination returns consistent ordering.
+- **Scope:** Store audit record with status, timestamps, scores, issues, encrypted raw payload; list endpoint with pagination and tenant isolation.
+- **Minimal implementation:** Wire Drizzle/Postgres repository with encryption at rest (DB-managed or application-level for sensitive blobs); replace MemStorage in runtime; add list route with limit/offset or cursor that enforces tenant scoping/ACLs.
+- **Verification:** Submit audits, restart server, confirm history persists; verify pagination returns consistent ordering; ensure tenants cannot read others’ records and encrypted payloads are inaccessible without keys.
 - **Likely files:** `server/db/schema.ts`, `server/repositories/auditRepo.ts`, `server/routes/history.ts`.
 
 ### 5) Status/Progress Surfacing (P1)
@@ -75,8 +75,7 @@ Concise documentation of the MVP features that remain to be implemented for the 
 
 ### 10) Configuration & Env Hygiene (P1)
 - **Why it matters:** Ensures consistent deploys and quick setup.
-- **Scope:** Document required environment variables and fail fast when missing.
-- **Minimal implementation:** `.env.example` updates; config loader that throws on absent critical vars (DB URL, API keys, Chrome path, base URLs).
-- **Verification:** Start app without vars to confirm clear error; with vars set, app boots and audits run.
+- **Scope:** Document required environment variables and fail fast when missing; secure handling of credentials via secrets manager or encrypted storage.
+- **Minimal implementation:** `.env.example` updates with placeholders; config loader that throws on absent critical vars (DB URL, API keys, Chrome path, base URLs); integrate secrets manager or encrypted env injection for production, avoiding hard-coded credentials.
+- **Verification:** Start app without vars to confirm clear error; with vars set, app boots and audits run; ensure production loads secrets from manager and rejects hard-coded defaults.
 - **Likely files:** `.env.example`, `server/config/index.ts`, `client/.env.example`.
-
