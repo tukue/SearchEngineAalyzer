@@ -14,8 +14,18 @@ import {
   type MonthlyUsage,
   type InsertUsageLedger,
   type InsertMonthlyUsage,
-  PLAN_CONFIGS
+  PLAN_CONFIGS,
+  tenants,
+  analyses,
+  metaTags,
+  recommendations,
+  usageTracking,
+  usageLedger,
+  monthlyUsage,
+  planChanges
 } from "@shared/schema";
+import { db, isDatabaseEnabled, type Database } from "./db";
+import { and, desc, eq } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -450,8 +460,384 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Export storage instance
-export const storage = new MemStorage();
+// Database-backed storage implementation for durability
+export class DbStorage implements IStorage {
+  private ready: Promise<void>;
+
+  constructor(private database: Database) {
+    this.ready = this.ensureDefaultTenant();
+  }
+
+  private async ensureDefaultTenant(): Promise<void> {
+    const existing = await this.database.query.tenants.findFirst({
+      where: eq(tenants.id, 1)
+    });
+
+    if (!existing) {
+      await this.database.insert(tenants).values({
+        id: 1,
+        name: "Default Tenant",
+        plan: "free"
+      });
+    }
+  }
+
+  async createTenant(name: string, plan: string = "free"): Promise<Tenant> {
+    await this.ready;
+
+    const [tenant] = await this.database
+      .insert(tenants)
+      .values({ name, plan })
+      .returning();
+
+    return tenant;
+  }
+
+  async getTenant(id: number): Promise<Tenant | undefined> {
+    await this.ready;
+    return this.database.query.tenants.findFirst({ where: eq(tenants.id, id) });
+  }
+
+  async updateTenantPlan(tenantId: number, newPlan: string, actorUserId?: string): Promise<void> {
+    await this.ready;
+    const existing = await this.getTenant(tenantId);
+    if (!existing) {
+      throw new Error("Tenant not found");
+    }
+
+    await this.database.update(tenants).set({
+      plan: newPlan,
+      updatedAt: new Date()
+    }).where(eq(tenants.id, tenantId));
+
+    await this.database.insert(usageLedger).values({
+      tenantId,
+      requestId: `plan-change-${Date.now()}`,
+      auditType: "plan_change",
+      status: "completed",
+      url: null,
+      userId: actorUserId || null,
+      period: new Date().toISOString().slice(0, 7)
+    });
+
+    await this.database.insert(planChanges).values({
+      tenantId,
+      previousPlan: existing.plan,
+      newPlan,
+      actorUserId: actorUserId || null
+    });
+  }
+
+  async createAnalysis(tenantId: number, analysisData: Omit<AnalysisResult, 'analysis'> & { analysis: Omit<Analysis, 'id' | 'tenantId'> }): Promise<AnalysisResult> {
+    await this.ready;
+
+    const [analysis] = await this.database.insert(analyses).values({
+      ...analysisData.analysis,
+      tenantId
+    }).returning();
+
+    const tagsToInsert: InsertMetaTag[] = analysisData.tags.map(tag => ({
+      tenantId,
+      url: analysis.url,
+      name: tag.name || null,
+      property: tag.property || null,
+      content: tag.content || null,
+      httpEquiv: tag.httpEquiv || null,
+      charset: tag.charset || null,
+      rel: tag.rel || null,
+      tagType: tag.tagType,
+      isPresent: tag.isPresent
+    }));
+
+    const recsToInsert: InsertRecommendation[] = analysisData.recommendations.map(rec => ({
+      analysisId: analysis.id,
+      tagName: rec.tagName,
+      description: rec.description,
+      example: rec.example
+    }));
+
+    if (tagsToInsert.length) {
+      await this.database.insert(metaTags).values(tagsToInsert);
+    }
+
+    if (recsToInsert.length) {
+      await this.database.insert(recommendations).values(recsToInsert);
+    }
+
+    const storedTags = await this.database.query.metaTags.findMany({
+      where: and(eq(metaTags.url, analysis.url), eq(metaTags.tenantId, tenantId))
+    });
+
+    const storedRecs = await this.database.query.recommendations.findMany({
+      where: eq(recommendations.analysisId, analysis.id)
+    });
+
+    return {
+      analysis,
+      tags: storedTags,
+      recommendations: storedRecs
+    };
+  }
+
+  async getAnalysis(tenantId: number, id: number): Promise<AnalysisResult | undefined> {
+    await this.ready;
+    const analysis = await this.database.query.analyses.findFirst({
+      where: and(eq(analyses.id, id), eq(analyses.tenantId, tenantId))
+    });
+
+    if (!analysis) return undefined;
+
+    const tags = await this.database.query.metaTags.findMany({
+      where: and(eq(metaTags.url, analysis.url), eq(metaTags.tenantId, tenantId))
+    });
+    const recs = await this.database.query.recommendations.findMany({ where: eq(recommendations.analysisId, id) });
+
+    return { analysis, tags, recommendations: recs };
+  }
+
+  async getAnalysisByUrl(tenantId: number, url: string): Promise<AnalysisResult | undefined> {
+    await this.ready;
+    const analysis = await this.database.query.analyses.findFirst({
+      where: and(eq(analyses.url, url), eq(analyses.tenantId, tenantId))
+    });
+
+    if (!analysis) return undefined;
+
+    const tags = await this.database.query.metaTags.findMany({
+      where: and(eq(metaTags.url, url), eq(metaTags.tenantId, tenantId))
+    });
+    const recs = await this.database.query.recommendations.findMany({ where: eq(recommendations.analysisId, analysis.id) });
+
+    return { analysis, tags, recommendations: recs };
+  }
+
+  async getAnalysisHistory(tenantId: number, limit?: number): Promise<Analysis[]> {
+    await this.ready;
+    const results = await this.database.query.analyses.findMany({
+      where: eq(analyses.tenantId, tenantId),
+      orderBy: [desc(analyses.timestamp)],
+      limit
+    });
+    return results;
+  }
+
+  async incrementUsage(tenantId: number, type: 'audit' | 'export'): Promise<void> {
+    await this.ready;
+    const month = new Date().toISOString().slice(0, 7);
+    const existing = await this.database.query.usageTracking.findFirst({
+      where: and(eq(usageTracking.tenantId, tenantId), eq(usageTracking.month, month))
+    });
+
+    if (existing) {
+      await this.database.update(usageTracking).set({
+        auditCount: type === 'audit' ? existing.auditCount + 1 : existing.auditCount,
+        exportCount: type === 'export' ? existing.exportCount + 1 : existing.exportCount
+      }).where(eq(usageTracking.id, existing.id));
+    } else {
+      await this.database.insert(usageTracking).values({
+        tenantId,
+        month,
+        auditCount: type === 'audit' ? 1 : 0,
+        exportCount: type === 'export' ? 1 : 0
+      });
+    }
+  }
+
+  async getCurrentUsage(tenantId: number, month: string): Promise<UsageTracking | undefined> {
+    await this.ready;
+    return this.database.query.usageTracking.findFirst({
+      where: and(eq(usageTracking.tenantId, tenantId), eq(usageTracking.month, month))
+    });
+  }
+
+  async createUsageLedgerEntry(entry: Omit<InsertUsageLedger, 'id'>): Promise<UsageLedger> {
+    await this.ready;
+    const [inserted] = await this.database.transaction(async (tx) => {
+      const created = await tx.insert(usageLedger).values({
+        tenantId: entry.tenantId,
+        requestId: entry.requestId,
+        auditType: entry.auditType || "meta_analysis",
+        status: entry.status || "enqueued",
+        url: entry.url || null,
+        userId: entry.userId || null,
+        period: entry.period
+      }).returning();
+
+      await this.updateMonthlyUsage(entry.tenantId, entry.period, tx);
+      return created;
+    });
+
+    return inserted;
+  }
+
+  async getUsageLedgerEntry(tenantId: number, requestId: string): Promise<UsageLedger | undefined> {
+    await this.ready;
+    return this.database.query.usageLedger.findFirst({
+      where: and(eq(usageLedger.tenantId, tenantId), eq(usageLedger.requestId, requestId))
+    });
+  }
+
+  async updateUsageLedgerEntry(tenantId: number, requestId: string, status: 'completed' | 'failed'): Promise<void> {
+    await this.ready;
+    const existing = await this.getUsageLedgerEntry(tenantId, requestId);
+    if (!existing) {
+      throw new Error(`Usage ledger entry not found: ${tenantId}-${requestId}`);
+    }
+
+    await this.database.transaction(async (tx) => {
+      await tx.update(usageLedger).set({
+        status,
+        completedAt: status === 'completed' ? new Date() : null,
+        failedAt: status === 'failed' ? new Date() : null
+      }).where(and(eq(usageLedger.tenantId, tenantId), eq(usageLedger.requestId, requestId)));
+
+      await this.updateMonthlyUsage(tenantId, existing.period, tx);
+    });
+  }
+
+  async getMonthlyUsage(tenantId: number, period: string): Promise<MonthlyUsage | undefined> {
+    await this.ready;
+    return this.database.query.monthlyUsage.findFirst({
+      where: and(eq(monthlyUsage.tenantId, tenantId), eq(monthlyUsage.period, period))
+    });
+  }
+
+  async updateMonthlyUsage(tenantId: number, period: string, txRef?: Database | any): Promise<void> {
+    const executor = txRef || this.database;
+    const entries = await executor.query.usageLedger.findMany({
+      where: and(eq(usageLedger.tenantId, tenantId), eq(usageLedger.period, period))
+    });
+
+    const enqueuedCount = entries.length;
+    const completedCount = entries.filter(e => e.status === 'completed').length;
+    const failedCount = entries.filter(e => e.status === 'failed').length;
+
+    const existing = await executor.query.monthlyUsage.findFirst({
+      where: and(eq(monthlyUsage.tenantId, tenantId), eq(monthlyUsage.period, period))
+    });
+
+    if (existing) {
+      await executor.update(monthlyUsage).set({
+        enqueuedCount,
+        completedCount,
+        failedCount,
+        lastUpdated: new Date()
+      }).where(eq(monthlyUsage.id, existing.id));
+    } else {
+      await executor.insert(monthlyUsage).values({
+        tenantId,
+        period,
+        enqueuedCount,
+        completedCount,
+        failedCount,
+        lastUpdated: new Date()
+      });
+    }
+  }
+
+  async atomicQuotaReservation(entry: Omit<InsertUsageLedger, 'id'>): Promise<{ success: boolean; quotaStatus: any; quotaUsed?: number; quotaLimit?: number; period?: string }> {
+    await this.ready;
+
+    const result = await this.database.transaction(async (tx) => {
+      const tenant = await tx.query.tenants.findFirst({ where: eq(tenants.id, entry.tenantId) });
+      if (!tenant) {
+        throw new Error("Tenant not found");
+      }
+
+      const quotaLimit = PLAN_CONFIGS[tenant.plan as keyof typeof PLAN_CONFIGS].monthlyAuditLimit;
+      const usage = await tx.query.monthlyUsage.findFirst({
+        where: and(eq(monthlyUsage.tenantId, entry.tenantId), eq(monthlyUsage.period, entry.period))
+      });
+
+      const quotaUsed = usage?.enqueuedCount || 0;
+      if (quotaUsed >= quotaLimit) {
+        const quotaStatus = {
+          quotaRemaining: 0,
+          quotaUsed,
+          quotaLimit,
+          quotaPercentUsed: 100,
+          warningLevel: "exceeded" as const,
+          period: entry.period
+        };
+        return { success: false, quotaStatus, quotaUsed, quotaLimit, period: entry.period };
+      }
+
+      await tx.insert(usageLedger).values({
+        tenantId: entry.tenantId,
+        requestId: entry.requestId,
+        auditType: entry.auditType || "meta_analysis",
+        status: entry.status || "enqueued",
+        url: entry.url || null,
+        userId: entry.userId || null,
+        period: entry.period
+      });
+
+      await this.updateMonthlyUsage(entry.tenantId, entry.period, tx);
+
+      const updatedUsage = await tx.query.monthlyUsage.findFirst({
+        where: and(eq(monthlyUsage.tenantId, entry.tenantId), eq(monthlyUsage.period, entry.period))
+      });
+
+      const newQuotaUsed = updatedUsage?.enqueuedCount || 0;
+      const quotaRemaining = Math.max(0, quotaLimit - newQuotaUsed);
+      const quotaPercentUsed = quotaLimit > 0 ? (newQuotaUsed / quotaLimit) * 100 : 0;
+
+      let warningLevel: "none" | "warning_80" | "warning_90" | "exceeded" = "none";
+      if (quotaPercentUsed >= 100) warningLevel = "exceeded";
+      else if (quotaPercentUsed >= 90) warningLevel = "warning_90";
+      else if (quotaPercentUsed >= 80) warningLevel = "warning_80";
+
+      const quotaStatus = {
+        quotaRemaining,
+        quotaUsed: newQuotaUsed,
+        quotaLimit,
+        quotaPercentUsed: Math.round(quotaPercentUsed * 100) / 100,
+        warningLevel,
+        period: entry.period
+      };
+
+      return { success: true, quotaStatus };
+    });
+
+    return result;
+  }
+
+  async releaseQuotaReservation(tenantId: number, requestId: string): Promise<void> {
+    await this.ready;
+    const entry = await this.getUsageLedgerEntry(tenantId, requestId);
+    if (!entry) return;
+
+    await this.database.transaction(async (tx) => {
+      await tx.delete(usageLedger).where(and(eq(usageLedger.tenantId, tenantId), eq(usageLedger.requestId, requestId)));
+      await this.updateMonthlyUsage(tenantId, entry.period, tx);
+    });
+  }
+
+  async cleanupExpiredQuotaReservations(tenantId: number, olderThanHours: number): Promise<number> {
+    await this.ready;
+    const cutoffTime = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
+
+    const staleEntries = await this.database.query.usageLedger.findMany({
+      where: and(eq(usageLedger.tenantId, tenantId), eq(usageLedger.status, "enqueued"))
+    });
+
+    const toDelete = staleEntries.filter(entry => (entry.enqueuedAt ?? new Date()) < cutoffTime);
+
+    await this.database.transaction(async (tx) => {
+      for (const entry of toDelete) {
+        await tx.delete(usageLedger).where(and(eq(usageLedger.id, entry.id), eq(usageLedger.tenantId, tenantId)));
+        await this.updateMonthlyUsage(tenantId, entry.period, tx);
+      }
+    });
+
+    return toDelete.length;
+  }
+}
+
+// Export storage instance (DB when available, otherwise in-memory)
+export const storage: IStorage = isDatabaseEnabled && db
+  ? new DbStorage(db)
+  : new MemStorage();
 
 // Helper function to get default tenant context for MVP
 export async function getDefaultTenantContext(): Promise<TenantContext> {
