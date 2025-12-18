@@ -133,6 +133,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!tenantIdHeader || !userIdHeader) {
         throw createHttpError("Authentication required", 401);
       }
+      if (tenantIdHeader !== String(tenantContext.tenantId)) {
+        throw createHttpError("Tenant mismatch", 403);
+      }
 
       const userRoleHeader = (req.header("x-tenant-role") || "member").toLowerCase();
       if (userRoleHeader === "read-only") {

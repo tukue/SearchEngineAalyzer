@@ -3,6 +3,10 @@ import { AnalysisResult } from "@shared/schema";
 import { createHttpError, fetchWithNetworkLimits, validatePublicHttpsUrl } from "../url-safety";
 
 export async function analyzeUrl(normalizedUrl: string, options?: { tenantId?: string; userId?: string; auditType?: string }): Promise<AnalysisResult> {
+  if (!normalizedUrl || typeof normalizedUrl !== "string") {
+    throw createHttpError("Invalid URL parameter");
+  }
+
   const parsedUrl = await validatePublicHttpsUrl(normalizedUrl, options?.tenantId ? `tenant=${options.tenantId}` : undefined);
 
   let response;

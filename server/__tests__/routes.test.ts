@@ -34,7 +34,7 @@ describe('API Routes', () => {
   let server: Server;
   let request: any; // Use any to avoid type issues with supertest
 
-  const withTenant = (req: any, tenantId = 'test-tenant', userId = 'user-1', role = 'owner') =>
+  const withTenant = (req: any, tenantId = '1', userId = 'user-1', role = 'owner') =>
     req.set('x-tenant-id', tenantId).set('x-user-id', userId).set('x-tenant-role', role);
 
   beforeAll(async () => {
@@ -106,8 +106,18 @@ describe('API Routes', () => {
       expect(response.body.message).toMatch(/not allowed/i);
     });
 
+    it('should block private IP addresses', async () => {
+      const privateIps = ['https://10.0.0.1', 'https://172.16.0.1', 'https://192.168.1.10'];
+
+      for (const ip of privateIps) {
+        const response = await withTenant(request.post('/api/analyze')).send({ url: ip });
+        expect(response.status).toBe(400);
+        expect(response.body.message).toMatch(/not allowed|disallowed/i);
+      }
+    });
+
     it('should block read-only users from creating analyses', async () => {
-      const response = await withTenant(request.post('/api/analyze'), 'test-tenant', 'user-2', 'read-only').send({
+      const response = await withTenant(request.post('/api/analyze'), '1', 'user-2', 'read-only').send({
         url: 'https://example.com',
       });
 
@@ -117,14 +127,14 @@ describe('API Routes', () => {
   });
 
   describe('GET /api/analyses/:id', () => {
-    it('should return 404 for cross-tenant access', async () => {
-      const created = await withTenant(request.post('/api/analyze'), 'tenant-a', 'user-a', 'owner').send({
+    it('should reject tenant mismatch access attempts', async () => {
+      const created = await withTenant(request.post('/api/analyze'), '1', 'user-a', 'owner').send({
         url: 'https://example.com',
       });
 
       const analysisId = created.body.analysis.id;
 
-      const response = await withTenant(request.get(`/api/analyses/${analysisId}`), 'tenant-b', 'user-b', 'owner');
+      const response = await withTenant(request.get(`/api/analyses/${analysisId}`), '2', 'user-b', 'owner');
 
       expect(response.status).toBe(404);
     });

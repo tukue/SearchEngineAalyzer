@@ -37,8 +37,24 @@ function isBlockedHostname(hostname: string): boolean {
 function isPrivateAddress(address: string, family?: number): boolean {
   const ipFamily = family ?? net.isIP(address);
 
+  if (ipFamily === 0) {
+    return true;
+  }
+
   if (ipFamily === 4) {
-    const [first, second] = address.split(".").map((part) => parseInt(part, 10));
+    const parts = address.split(".");
+    if (parts.length !== 4) {
+      return true;
+    }
+
+    const [first, second, third, fourth] = parts.map((part) => {
+      const num = parseInt(part, 10);
+      return isNaN(num) || num < 0 || num > 255 ? -1 : num;
+    });
+
+    if ([first, second, third, fourth].some((num) => num === -1)) {
+      return true;
+    }
 
     return (
       first === 10 ||
@@ -52,12 +68,21 @@ function isPrivateAddress(address: string, family?: number): boolean {
 
   if (ipFamily === 6) {
     const normalized = address.toLowerCase();
+
+    // IPv4-mapped IPv6 (e.g., ::ffff:10.0.0.1)
+    const mappedMatch = normalized.match(/^::ffff:(.+)$/);
+    if (mappedMatch && mappedMatch[1]) {
+      return isPrivateAddress(mappedMatch[1], 4);
+    }
+
     return (
       normalized === "::1" ||
       normalized === "::" ||
-      normalized.startsWith("fc") ||
+      normalized.startsWith("fc00:") ||
       normalized.startsWith("fd") ||
-      normalized.startsWith("fe80")
+      normalized.startsWith("fe80:") ||
+      normalized.startsWith("ff") || // multicast
+      normalized.startsWith("::ffff:") // IPv4-mapped (already handled, kept for redundancy)
     );
   }
 
