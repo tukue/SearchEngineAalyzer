@@ -1,10 +1,10 @@
 {
   "version": 2,
   "installCommand": "npm install",
-  "buildCommand": "npm run vercel-build",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/index.ts": { "runtime": "nodejs20.x" }
+    "api/index.ts": { "runtime": "nodejs24.x" }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
