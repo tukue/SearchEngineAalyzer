@@ -43,3 +43,41 @@ Lean assessment of the current MVP (URL → audit → stored result → report) 
   - [ ] Basic rate limiting/backpressure to protect the audit handler.
   - [ ] Health/metrics endpoint and request/audit logs live in the deploy.
   - [ ] CI smoke test: submit URL → audit completes → report retrieved.
+
+## MVP Readiness Coverage (Current Build)
+| Item | Status | Notes | Priority |
+| --- | --- | --- | --- |
+| Health endpoint for uptime checks | ✅ Implemented | `/api/health` responds with status/version. | P1 |
+| URL submission + audit execution | ⚠️ Partially implemented | `/api/meta/analyze` runs end-to-end but inline on web thread and lacks timeouts/retries. | P0 |
+| Quota/plan gating | ⚠️ Partially implemented | Usage limits and plan gating middleware exist but rely on in-memory storage and default tenant. | P0 |
+| Persistent audit storage/history | ❌ Missing | Audits and usage ledger use `MemStorage`; no Drizzle/DB persistence wired. | P0 |
+| SSRF and URL safety | ❌ Missing | No HTTPS-only enforcement, no private-network/localhost blocking, no response size/time limits. | P0 |
+| Auth for write paths | ❌ Missing | API routes unauthenticated; tenant context is defaulted. | P0 |
+| Shareable read-only reports | ❌ Missing | No signed link or read-only report route. | P1 |
+| Report UX (scores, missing tags, recommendations) | ⚠️ Partially implemented | API returns structured data; need to confirm client renders full report with states. | P1 |
+| Error/retry visibility | ⚠️ Partially implemented | API returns errors; no UI surfacing of retry/failed states. | P1 |
+| Rate limiting/backpressure | ❌ Missing | No middleware; queue only dedupes per key in-memory. | P0 |
+| Logging/observability | ⚠️ Partially implemented | Basic request logging for `/api`; no metrics/structured logs. | P2 |
+| CI smoke test (submit → audit → report) | ❌ Missing | No automated smoke covering end-to-end path. | P1 |
+| Export/PDF | ❌ Missing | Not present. | P2 |
+
+## Launch Blockers (P0)
+- Inline audit execution without timeouts/retries risks hanging the web thread.
+- No SSRF protection (allows localhost/private network fetches) and no HTTPS-only enforcement.
+- No auth or tenant-derived context for write paths.
+- Audit/usage storage is in-memory; results and quota reset on restart.
+- No rate limiting/backpressure to protect the audit handler.
+- Quota/plan gating depends on volatile storage (can be bypassed after restart).
+
+## Minimum Action Plan to Ship (Prioritized)
+1) Wire Drizzle/DB for audits, usage ledger, and plan changes; keep MemStorage for tests.  
+2) Add request validation guards: HTTPS-only, block private/loopback IPs, enforce fetch timeout and max body size for `/api/meta/analyze`.  
+3) Add lightweight auth/token gate for write paths and derive tenant context from identity.  
+4) Add basic rate limiting/backpressure (per-IP or per-tenant) ahead of audit handler; cap concurrent audits and set per-request timeout with limited retries.  
+5) Surface clear statuses to users (queued/running/failed/complete) and ensure error messaging in the client.  
+6) Add an automated smoke test: submit URL → audit completes → report retrieved.  
+7) Implement signed read-only share links for reports (can be short-lived tokens).  
+
+## Go / No-Go
+- **Recommendation: NO-GO** until the P0 blockers are addressed.  
+- After completing the Minimum Action Plan items 1–6, re-evaluate; item 7 can be parallelized if time permits but should not block if a basic share flow is acceptable post-MVP.
