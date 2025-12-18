@@ -34,7 +34,7 @@ describe('API Routes', () => {
   let server: Server;
   let request: any; // Use any to avoid type issues with supertest
 
-  const withTenant = (req: any, tenantId = 'test-tenant', userId = 'user-1', role = 'owner') =>
+  const withTenant = (req: any, tenantId = '1', userId = 'user-1', role = 'owner') =>
     req.set('x-tenant-id', tenantId).set('x-user-id', userId).set('x-tenant-role', role);
 
   beforeAll(async () => {
@@ -45,7 +45,7 @@ describe('API Routes', () => {
   });
 
   afterAll((done) => {
-    if (server) {
+    if (server && server.listening) {
       server.close(done);
     } else {
       done();
@@ -54,14 +54,14 @@ describe('API Routes', () => {
 
   describe('POST /api/analyze', () => {
     it('should return 400 for invalid URL', async () => {
-      const response = await withTenant(request.post('/api/analyze')).send({ url: '' });
+      const response = await withTenant(request.post('/api/analyze')).send({ url: '', requestId: 'invalid-url' });
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('message');
     });
 
     it('should analyze a valid URL and return results', async () => {
-      const response = await withTenant(request.post('/api/analyze')).send({ url: 'https://example.com' });
+      const response = await withTenant(request.post('/api/analyze')).send({ url: 'https://example.com', requestId: 'valid-url' });
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('analysis');
@@ -92,9 +92,44 @@ describe('API Routes', () => {
       expect(response.status).toBe(401);
     });
 
+    it('should block non-HTTPS targets', async () => {
+      const response = await withTenant(request.post('/api/analyze')).send({ url: 'http://example.com', requestId: 'non-https' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/https/i);
+    });
+
+    it('should block localhost targets', async () => {
+      const response = await withTenant(request.post('/api/analyze')).send({ url: 'https://localhost', requestId: 'localhost' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/not allowed/i);
+    });
+
+    it('should block private IP addresses', async () => {
+      const privateIps = ['https://10.0.0.1', 'https://172.16.0.1', 'https://192.168.1.10'];
+
+      for (const ip of privateIps) {
+        const response = await withTenant(request.post('/api/analyze')).send({ url: ip, requestId: 'private-ip' });
+        expect(response.status).toBe(400);
+        expect(response.body.message).toMatch(/not allowed|disallowed/i);
+      }
+    });
+
+    it('should block IPv6 private and mapped private addresses', async () => {
+      const privateIps = ['https://[fd00::1]', 'https://[::ffff:10.0.0.5]'];
+
+      for (const ip of privateIps) {
+        const response = await withTenant(request.post('/api/analyze')).send({ url: ip, requestId: 'ipv6-private' });
+        expect(response.status).toBe(400);
+        expect(response.body.message).toMatch(/not allowed|disallowed|resolve/i);
+      }
+    });
+
     it('should block read-only users from creating analyses', async () => {
-      const response = await withTenant(request.post('/api/analyze'), 'test-tenant', 'user-2', 'read-only').send({
+      const response = await withTenant(request.post('/api/analyze'), '1', 'user-2', 'read-only').send({
         url: 'https://example.com',
+        requestId: 'readonly-user',
       });
 
       expect(response.status).toBe(403);
@@ -103,14 +138,16 @@ describe('API Routes', () => {
   });
 
   describe('GET /api/analyses/:id', () => {
-    it('should return 404 for cross-tenant access', async () => {
-      const created = await withTenant(request.post('/api/analyze'), 'tenant-a', 'user-a', 'owner').send({
+    it('should reject tenant mismatch access attempts', async () => {
+      const created = await withTenant(request.post('/api/analyze'), '1', 'user-a', 'owner').send({
         url: 'https://example.com',
+        requestId: 'tenant-a-analysis',
       });
+      expect(created.status).toBe(200);
 
       const analysisId = created.body.analysis.id;
 
-      const response = await withTenant(request.get(`/api/analyses/${analysisId}`), 'tenant-b', 'user-b', 'owner');
+      const response = await withTenant(request.get(`/api/analyses/${analysisId}`), '2', 'user-b', 'owner');
 
       expect(response.status).toBe(404);
     });

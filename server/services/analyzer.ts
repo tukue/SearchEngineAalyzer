@@ -1,24 +1,28 @@
-import fetch from "node-fetch";
 import * as cheerio from "cheerio";
 import { AnalysisResult } from "@shared/schema";
+import { createHttpError, fetchWithNetworkLimits, validatePublicHttpsUrl } from "../url-safety";
 
 export async function analyzeUrl(normalizedUrl: string, options?: { tenantId?: string; userId?: string; auditType?: string }): Promise<AnalysisResult> {
+  if (!normalizedUrl || typeof normalizedUrl !== "string") {
+    throw createHttpError("Invalid URL parameter");
+  }
+
+  const parsedUrl = await validatePublicHttpsUrl(normalizedUrl, options?.tenantId ? `tenant=${options.tenantId}` : undefined);
+
   let response;
   try {
-    response = await fetch(normalizedUrl, {
+    response = await fetchWithNetworkLimits(parsedUrl.toString(), {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; MetaTagAnalyzer/1.0)",
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch website: ${response.status} ${response.statusText}`);
+      throw createHttpError(`Failed to fetch website: ${response.status} ${response.statusText}`);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const err = new Error(`Failed to connect to the website: ${message}`);
-    (err as any).status = 400;
-    throw err;
+    throw createHttpError(`Failed to connect to the website: ${message}`);
   }
 
   const html = await response.text();
