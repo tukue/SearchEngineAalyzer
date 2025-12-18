@@ -15,4 +15,13 @@ export function createDb(): Database {
   return drizzle(sql, { schema });
 }
 
-export const db: Database | null = isDatabaseEnabled ? createDb() : null;
+export const db: Database | null = isDatabaseEnabled
+  ? (() => {
+      try {
+        return createDb();
+      } catch (error) {
+        console.error("Failed to initialize database:", error);
+        return null;
+      }
+    })()
+  : null;

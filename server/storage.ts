@@ -469,16 +469,21 @@ export class DbStorage implements IStorage {
   }
 
   private async ensureDefaultTenant(): Promise<void> {
-    const existing = await this.database.query.tenants.findFirst({
-      where: eq(tenants.id, 1)
-    });
-
-    if (!existing) {
-      await this.database.insert(tenants).values({
-        id: 1,
-        name: "Default Tenant",
-        plan: "free"
+    try {
+      const existing = await this.database.query.tenants.findFirst({
+        where: eq(tenants.id, 1)
       });
+
+      if (!existing) {
+        await this.database.insert(tenants).values({
+          id: 1,
+          name: "Default Tenant",
+          plan: "free"
+        });
+      }
+    } catch (error) {
+      console.error('Failed to ensure default tenant:', error);
+      throw error;
     }
   }
 
@@ -702,7 +707,11 @@ export class DbStorage implements IStorage {
     });
   }
 
-  async updateMonthlyUsage(tenantId: number, period: string, txRef?: Database | any): Promise<void> {
+  async updateMonthlyUsage(
+    tenantId: number,
+    period: string,
+    txRef?: Parameters<Database['transaction']>[0] extends (tx: infer T) => any ? T : Database
+  ): Promise<void> {
     const executor = txRef || this.database;
     const entries = await executor.query.usageLedger.findMany({
       where: and(eq(usageLedger.tenantId, tenantId), eq(usageLedger.period, period))
@@ -835,9 +844,18 @@ export class DbStorage implements IStorage {
 }
 
 // Export storage instance (DB when available, otherwise in-memory)
-export const storage: IStorage = isDatabaseEnabled && db
-  ? new DbStorage(db)
-  : new MemStorage();
+export const storage: IStorage = (() => {
+  if (isDatabaseEnabled && db) {
+    try {
+      return new DbStorage(db);
+    } catch (error) {
+      console.error('Failed to initialize database storage, falling back to memory storage:', error);
+      return new MemStorage();
+    }
+  }
+
+  return new MemStorage();
+})();
 
 // Helper function to get default tenant context for MVP
 export async function getDefaultTenantContext(): Promise<TenantContext> {
