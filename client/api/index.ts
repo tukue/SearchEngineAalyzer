@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { storage, getDefaultTenantContext } from '../server/storage';
-import { urlSchema } from '../shared/schema';
+import { storage, getDefaultTenantContext } from '../../server/storage';
+import { urlSchema } from '../../shared/schema';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import * as cheerio from 'cheerio';
