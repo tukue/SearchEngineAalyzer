@@ -1,51 +1,22 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { apiFetch } from "./api";
 
-async function throwIfResNotOk(res: Response) {
+const throwIfResNotOk = async (res: Response) => {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
-}
-
-const defaultTenantHeaders: Record<string, string> = {
-  get Authorization() {
-    const token = import.meta.env.VITE_API_TOKEN;
-    if (!token) {
-      throw new Error("VITE_API_TOKEN environment variable is required");
-    }
-    return `Bearer ${token}`;
-  },
 };
 
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: {
-      ...defaultTenantHeaders,
-      ...(data ? { "Content-Type": "application/json" } : {}),
-    },
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-
-  await throwIfResNotOk(res);
-  return res;
-}
-
 type UnauthorizedBehavior = "returnNull" | "throw";
+
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      headers: defaultTenantHeaders,
-      credentials: "include",
-    });
+    const endpoint = queryKey[0] as string;
+    const res = await apiFetch(endpoint);
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;

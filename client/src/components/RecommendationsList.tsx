@@ -1,6 +1,6 @@
 import { Info, Star, Check, Copy } from "lucide-react";
 import { useState } from "react";
-import { Recommendation } from "@shared/schema";
+import { Recommendation } from "@/types/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";

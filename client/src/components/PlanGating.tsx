@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription } from './ui/alert';
 import { Lock, Zap, Crown, AlertTriangle } from 'lucide-react';
+import { apiJson } from '@/lib/api';
 
 interface PlanInfo {
   currentPlan: 'free' | 'pro';
@@ -31,13 +32,12 @@ export function usePlanInfo() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/plan')
-      .then(res => res.json())
-      .then(data => {
+    apiJson<PlanInfo>('GET', '/plan')
+      .then((data) => {
         setPlanInfo(data);
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error('Failed to fetch plan info:', err);
         setLoading(false);
       });

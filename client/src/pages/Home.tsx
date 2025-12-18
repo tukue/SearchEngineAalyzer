@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiJson } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { HistoryIcon, RefreshCw, ExternalLink, Download, Crown } from "lucide-react";
 import URLInputForm from "@/components/URLInputForm";
@@ -9,7 +9,7 @@ import ErrorState from "@/components/ErrorState";
 import ResultsContainer from "@/components/ResultsContainer";
 import GettingStarted from "@/components/GettingStarted";
 import { usePlanInfo, usePlanGatingErrorHandler, FeatureGate, PlanComparison } from "@/components/PlanGating";
-import { AnalysisResult } from "@shared/schema";
+import { AnalysisResult } from "@/types/schema";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +26,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 type SearchHistoryItem = {
   url: string;
   timestamp: string;
+};
+
+type AnalysisHistoryResponse = {
+  analyses: Array<{
+    id: number;
+    url: string;
+    healthScore: number;
+    missingCount: number;
+    timestamp: string;
+  }>;
 };
 
 export default function Home() {
@@ -52,19 +62,15 @@ export default function Home() {
   }, []);
   
   // Fetch analysis history from server
-  const { data: serverHistory } = useQuery({
+  const { data: serverHistory } = useQuery<AnalysisHistoryResponse>({
     queryKey: ['analysis-history'],
-    queryFn: async () => {
-      const res = await apiRequest('GET', '/api/history');
-      return res.json();
-    },
+    queryFn: async () => apiJson<AnalysisHistoryResponse>('GET', '/history'),
     enabled: !!planInfo
   });
 
   const { mutate, isPending, isError, error, reset } = useMutation({
-    mutationFn: async (url: string) => {
-      const res = await apiRequest("POST", "/api/analyze", { url });
-      return res.json();
+    mutationFn: async (url: string): Promise<AnalysisResult> => {
+      return apiJson<AnalysisResult>("POST", "/analyze", { url });
     },
     onSuccess: (data: AnalysisResult) => {
       setAnalysisResults(data);
@@ -111,9 +117,8 @@ export default function Home() {
   
   // Export functionality
   const exportMutation = useMutation({
-    mutationFn: async ({ analysisId, format }: { analysisId: number; format: string }) => {
-      const res = await apiRequest('POST', `/api/export/${analysisId}`, { format });
-      return res.json();
+    mutationFn: async ({ analysisId, format }: { analysisId: number; format: string }): Promise<{ format: string }> => {
+      return apiJson<{ format: string }>('POST', `/export/${analysisId}`, { format });
     },
     onSuccess: (data) => {
       toast({
