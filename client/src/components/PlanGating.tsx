@@ -32,7 +32,7 @@ export function usePlanInfo() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiJson<PlanInfo>('GET', '/plan')
+    apiJson<PlanInfo>('GET', '/api/plan')
       .then((data) => {
         setPlanInfo(data);
         setLoading(false);

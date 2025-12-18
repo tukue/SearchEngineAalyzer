@@ -64,13 +64,13 @@ export default function Home() {
   // Fetch analysis history from server
   const { data: serverHistory } = useQuery<AnalysisHistoryResponse>({
     queryKey: ['analysis-history'],
-    queryFn: async () => apiJson<AnalysisHistoryResponse>('GET', '/history'),
+    queryFn: async () => apiJson<AnalysisHistoryResponse>('GET', '/api/history'),
     enabled: !!planInfo
   });
 
   const { mutate, isPending, isError, error, reset } = useMutation({
     mutationFn: async (url: string): Promise<AnalysisResult> => {
-      return apiJson<AnalysisResult>("POST", "/analyze", { url });
+      return apiJson<AnalysisResult>("POST", "/api/analyze", { url });
     },
     onSuccess: (data: AnalysisResult) => {
       setAnalysisResults(data);
@@ -118,7 +118,7 @@ export default function Home() {
   // Export functionality
   const exportMutation = useMutation({
     mutationFn: async ({ analysisId, format }: { analysisId: number; format: string }): Promise<{ format: string }> => {
-      return apiJson<{ format: string }>('POST', `/export/${analysisId}`, { format });
+      return apiJson<{ format: string }>('POST', `/api/export/${analysisId}`, { format });
     },
     onSuccess: (data) => {
       toast({
