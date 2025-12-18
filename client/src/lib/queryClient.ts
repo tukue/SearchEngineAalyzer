@@ -8,7 +8,13 @@ async function throwIfResNotOk(res: Response) {
 }
 
 const defaultTenantHeaders: Record<string, string> = {
-  Authorization: `Bearer ${import.meta.env.VITE_API_TOKEN || "dev-token"}`,
+  get Authorization() {
+    const token = import.meta.env.VITE_API_TOKEN;
+    if (!token) {
+      throw new Error("VITE_API_TOKEN environment variable is required");
+    }
+    return `Bearer ${token}`;
+  },
 };
 
 export async function apiRequest(

@@ -31,9 +31,11 @@ jest.mock('node-fetch', () => {
 describe('Plan Gating Integration Tests', () => {
   let app: express.Express;
   let server: any;
-  const withAuth = (req: request.Test) => req.set('authorization', 'Bearer dev-token');
+  const testToken = process.env.TEST_API_TOKEN || 'test-token';
+  const withAuth = (req: request.Test) => req.set('authorization', `Bearer ${testToken}`);
 
   beforeAll(async () => {
+    process.env.API_AUTH_TOKEN = testToken;
     app = express();
     app.use(express.json());
     server = await registerRoutes(app);

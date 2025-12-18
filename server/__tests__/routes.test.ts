@@ -34,14 +34,16 @@ describe('API Routes', () => {
   let server: Server;
   let request: any; // Use any to avoid type issues with supertest
 
+  const testToken = process.env.TEST_API_TOKEN || 'test-token';
   const withTenant = (req: any, tenantId = '1', userId = 'user-1', role = 'owner') =>
     req
-      .set('authorization', 'Bearer dev-token')
+      .set('authorization', `Bearer ${testToken}`)
       .set('x-tenant-id', tenantId)
       .set('x-user-id', userId)
       .set('x-tenant-role', role);
 
   beforeAll(async () => {
+    process.env.API_AUTH_TOKEN = testToken;
     app = express();
     app.use(express.json());
     server = await registerRoutes(app);

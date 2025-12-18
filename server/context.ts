@@ -48,14 +48,29 @@ function loadConfiguredTokens(): TokenConfig[] {
   }
 
   const singleToken = process.env.API_AUTH_TOKEN;
-  if (singleToken || tokenConfigs.length === 0) {
+  if (singleToken) {
     tokenConfigs.push({
-      token: singleToken || "dev-token",
+      token: singleToken,
       tenantId: Number(process.env.API_TENANT_ID || 1),
       userId: process.env.API_USER_ID || "dev-user",
       role: (process.env.API_USER_ROLE as TenantRole) || "owner",
       label: "default",
     });
+  }
+
+  if (tokenConfigs.length === 0) {
+    if (process.env.NODE_ENV === "test") {
+      const testToken = process.env.TEST_API_TOKEN || "test-token";
+      tokenConfigs.push({
+        token: testToken,
+        tenantId: Number(process.env.API_TENANT_ID || 1),
+        userId: process.env.API_USER_ID || "test-user",
+        role: (process.env.API_USER_ROLE as TenantRole) || "owner",
+        label: "test-default",
+      });
+    } else {
+      throw new Error("API_AUTH_TOKEN or API_AUTH_TOKENS environment variable is required");
+    }
   }
 
   return tokenConfigs;
