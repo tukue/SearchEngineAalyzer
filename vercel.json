@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "installCommand": "cd client && npm install",
+  "buildCommand": "cd client && npm run vercel-build",
+  "outputDirectory": "client/dist",
+  "functions": {
+    "client/api/index.ts": { "runtime": "nodejs20.x" }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
