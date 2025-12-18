@@ -7,7 +7,7 @@ import express from "express";
 import { urlSchema, AuditRequest, PLAN_CONFIGS, TenantContext } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
-import fetch from "node-fetch";
+import { fetchWithNetworkLimits, validatePublicHttpsUrl, createHttpError } from "./url-safety";
 import * as cheerio from "cheerio";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -128,32 +128,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request
       const auditRequest = AuditRequest.parse(req.body);
       const { url } = auditRequest;
-      
-      let normalizedUrl = url;
-      if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
-        normalizedUrl = "https://" + normalizedUrl;
+      const tenantIdHeader = req.header("x-tenant-id");
+      const userIdHeader = req.header("x-user-id");
+      if (!tenantIdHeader || !userIdHeader) {
+        throw createHttpError("Authentication required", 401);
       }
-      
-      // Fetch the website content
+
+      const userRoleHeader = (req.header("x-tenant-role") || "member").toLowerCase();
+      if (userRoleHeader === "read-only") {
+        throw createHttpError("Insufficient role for this action", 403);
+      }
+
+      const parsedUrl = await validatePublicHttpsUrl(url, `tenant=${tenantContext.tenantId}`);
+      const normalizedUrl = parsedUrl.toString();
+
       let response;
       try {
-        response = await fetch(normalizedUrl, {
+        response = await fetchWithNetworkLimits(normalizedUrl, {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; MetaTagAnalyzer/1.0)'
-          }
+            "User-Agent": "Mozilla/5.0 (compatible; MetaTagAnalyzer/1.0)",
+          },
         });
-        
-        if (!response.ok) {
-          return res.status(400).json({ 
-            message: `Failed to fetch website: ${response.status} ${response.statusText}` 
-          });
-        }
       } catch (error) {
-        return res.status(400).json({ 
-          message: `Failed to connect to the website: ${error instanceof Error ? error.message : String(error)}` 
-        });
+        throw createHttpError(
+          `Failed to connect to the website: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
-      
+
+      if (!response.ok) {
+        throw createHttpError(`Failed to fetch website: ${response.status} ${response.statusText}`);
+      }
+
       const html = await response.text();
       
       // Parse meta tags
@@ -444,6 +449,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const validationError = fromZodError(error);
         return res.status(400).json({ message: validationError.message || "Invalid request format" });
       }
+
+      if ((error as any).status) {
+        return res.status((error as any).status).json({ message: (error as Error).message });
+      }
+
       console.error("Error analyzing website:", error);
       res.status(500).json({ message: "Failed to analyze website" });
     }

@@ -45,7 +45,7 @@ describe('API Routes', () => {
   });
 
   afterAll((done) => {
-    if (server) {
+    if (server && server.listening) {
       server.close(done);
     } else {
       done();
@@ -90,6 +90,20 @@ describe('API Routes', () => {
     it('should reject requests without tenant context', async () => {
       const response = await request.post('/api/analyze').send({ url: 'https://example.com' });
       expect(response.status).toBe(401);
+    });
+
+    it('should block non-HTTPS targets', async () => {
+      const response = await withTenant(request.post('/api/analyze')).send({ url: 'http://example.com' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/https/i);
+    });
+
+    it('should block localhost targets', async () => {
+      const response = await withTenant(request.post('/api/analyze')).send({ url: 'https://localhost' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/not allowed/i);
     });
 
     it('should block read-only users from creating analyses', async () => {
