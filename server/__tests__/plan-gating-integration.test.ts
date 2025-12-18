@@ -3,11 +3,39 @@ import express from 'express';
 import { registerRoutes } from '../routes';
 import { storage } from '../storage';
 
+jest.mock('node-fetch', () => {
+  return jest.fn().mockImplementation(() => {
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      text: () => Promise.resolve(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Test Website</title>
+          <meta charset="UTF-8">
+          <meta name="description" content="This is a test website for unit testing">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <meta property="og:title" content="Test OG Title">
+        </head>
+        <body>
+          <h1>Test Content</h1>
+        </body>
+        </html>
+      `)
+    });
+  });
+});
+
 describe('Plan Gating Integration Tests', () => {
   let app: express.Express;
   let server: any;
+  const testToken = process.env.TEST_API_TOKEN || 'test-token';
+  const withAuth = (req: request.Test) => req.set('authorization', `Bearer ${testToken}`);
 
   beforeAll(async () => {
+    process.env.API_AUTH_TOKEN = testToken;
     app = express();
     app.use(express.json());
     server = await registerRoutes(app);
@@ -20,9 +48,9 @@ describe('Plan Gating Integration Tests', () => {
 
   describe('Free Plan Limitations', () => {
     it('should allow analysis within quota', async () => {
-      const response = await request(app)
+      const response = await withAuth(request(app)
         .post('/api/analyze')
-        .send({ url: 'https://example.com' });
+        .send({ url: 'https://example.com' }));
 
       expect(response.status).toBe(200);
       expect(response.body.analysis).toBeDefined();
@@ -30,16 +58,16 @@ describe('Plan Gating Integration Tests', () => {
 
     it('should deny export attempts', async () => {
       // First create an analysis
-      const analysisResponse = await request(app)
+      const analysisResponse = await withAuth(request(app)
         .post('/api/analyze')
-        .send({ url: 'https://example.com' });
+        .send({ url: 'https://example.com' }));
 
       const analysisId = analysisResponse.body.analysis.id;
 
       // Try to export (should fail for free plan)
-      const exportResponse = await request(app)
+      const exportResponse = await withAuth(request(app)
         .post(`/api/export/${analysisId}`)
-        .send({ format: 'pdf' });
+        .send({ format: 'pdf' }));
 
       expect(exportResponse.status).toBe(403);
       expect(exportResponse.body.code).toBe('PLAN_UPGRADE_REQUIRED');
@@ -47,8 +75,8 @@ describe('Plan Gating Integration Tests', () => {
     });
 
     it('should limit history depth', async () => {
-      const historyResponse = await request(app)
-        .get('/api/history');
+      const historyResponse = await withAuth(request(app)
+        .get('/api/history'));
 
       expect(historyResponse.status).toBe(200);
       expect(historyResponse.body.limit).toBe(5); // Free plan limit
@@ -58,8 +86,8 @@ describe('Plan Gating Integration Tests', () => {
 
   describe('Plan Information API', () => {
     it('should return current plan details', async () => {
-      const response = await request(app)
-        .get('/api/plan');
+      const response = await withAuth(request(app)
+        .get('/api/plan'));
 
       expect(response.status).toBe(200);
       expect(response.body.currentPlan).toBe('free');
@@ -87,24 +115,24 @@ describe('Plan Gating Integration Tests', () => {
 
     it('should allow exports for pro plan', async () => {
       // First create an analysis
-      const analysisResponse = await request(app)
+      const analysisResponse = await withAuth(request(app)
         .post('/api/analyze')
-        .send({ url: 'https://example.com' });
+        .send({ url: 'https://example.com' }));
 
       const analysisId = analysisResponse.body.analysis.id;
 
       // Try to export (should succeed for pro plan)
-      const exportResponse = await request(app)
+      const exportResponse = await withAuth(request(app)
         .post(`/api/export/${analysisId}`)
-        .send({ format: 'pdf' });
+        .send({ format: 'pdf' }));
 
       expect(exportResponse.status).toBe(200);
       expect(exportResponse.body.message).toContain('Export generated successfully');
     });
 
     it('should have higher history depth for pro plan', async () => {
-      const historyResponse = await request(app)
-        .get('/api/history');
+      const historyResponse = await withAuth(request(app)
+        .get('/api/history'));
 
       expect(historyResponse.status).toBe(200);
       expect(historyResponse.body.limit).toBe(100); // Pro plan limit
@@ -112,8 +140,8 @@ describe('Plan Gating Integration Tests', () => {
     });
 
     it('should return pro plan details', async () => {
-      const response = await request(app)
-        .get('/api/plan');
+      const response = await withAuth(request(app)
+        .get('/api/plan'));
 
       expect(response.status).toBe(200);
       expect(response.body.currentPlan).toBe('pro');
@@ -125,9 +153,9 @@ describe('Plan Gating Integration Tests', () => {
   describe('Error Handling', () => {
     it('should return structured error for plan upgrade required', async () => {
       // Try to export without pro plan
-      const response = await request(app)
+      const response = await withAuth(request(app)
         .post('/api/export/1')
-        .send({ format: 'pdf' });
+        .send({ format: 'pdf' }));
 
       expect(response.status).toBe(403);
       expect(response.body).toMatchObject({
@@ -144,8 +172,8 @@ describe('Plan Gating Integration Tests', () => {
     it('should not allow cross-tenant access', async () => {
       // This test would be more meaningful with multiple tenants
       // For now, it verifies that tenant context is properly enforced
-      const response = await request(app)
-        .get('/api/history');
+      const response = await withAuth(request(app)
+        .get('/api/history'));
 
       expect(response.status).toBe(200);
       // Verify that only analyses for the current tenant are returned
