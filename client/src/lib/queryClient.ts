@@ -7,10 +7,8 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-const defaultTenantHeaders = {
-  "x-tenant-id": import.meta.env.VITE_TENANT_ID || "",
-  "x-user-id": import.meta.env.VITE_USER_ID || "",
-  "x-tenant-role": import.meta.env.VITE_TENANT_ROLE || "member",
+const defaultTenantHeaders: Record<string, string> = {
+  Authorization: `Bearer ${import.meta.env.VITE_API_TOKEN || "dev-token"}`,
 };
 
 export async function apiRequest(

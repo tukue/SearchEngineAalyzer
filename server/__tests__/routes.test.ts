@@ -35,7 +35,11 @@ describe('API Routes', () => {
   let request: any; // Use any to avoid type issues with supertest
 
   const withTenant = (req: any, tenantId = '1', userId = 'user-1', role = 'owner') =>
-    req.set('x-tenant-id', tenantId).set('x-user-id', userId).set('x-tenant-role', role);
+    req
+      .set('authorization', 'Bearer dev-token')
+      .set('x-tenant-id', tenantId)
+      .set('x-user-id', userId)
+      .set('x-tenant-role', role);
 
   beforeAll(async () => {
     app = express();

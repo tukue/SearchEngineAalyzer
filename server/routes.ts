@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage, getDefaultTenantContext } from "./storage";
-import { requireEntitlement, checkQuota, PlanGatingService } from "./plan-gating";
+import { storage } from "./storage";
+import { requireEntitlement, PlanGatingService } from "./plan-gating";
 import { checkAndReserveQuota, addQuotaToResponse, UsageLimitsService } from "./usage-limits";
 import express from "express";
 import { urlSchema, AuditRequest, PLAN_CONFIGS, TenantContext } from "@shared/schema";
@@ -9,26 +9,11 @@ import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { fetchWithNetworkLimits, validatePublicHttpsUrl, createHttpError } from "./url-safety";
 import * as cheerio from "cheerio";
+import { requireAuthContext } from "./context";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   const apiRouter = express.Router();
-  
-  // Middleware to add tenant context (simplified for MVP - uses default tenant)
-  apiRouter.use(async (req, res, next) => {
-    try {
-      req.tenantContext = await getDefaultTenantContext();
-      next();
-    } catch (error) {
-      console.error('Failed to load tenant context:', error);
-      // Differentiate between authentication and system errors
-      if (error instanceof Error && error.message.includes('not found')) {
-        res.status(401).json({ message: "Authentication required" });
-      } else {
-        res.status(500).json({ message: "System error occurred" });
-      }
-    }
-  });
 
   // Health check endpoint for CI/CD
   apiRouter.get("/health", (req, res) => {
@@ -39,7 +24,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       version: "1.0.0"
     });
   });
-  
+
+  apiRouter.use(requireAuthContext);
+
   // Get current plan and entitlements with quota status
   apiRouter.get("/plan", async (req, res) => {
     try {
@@ -118,27 +105,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to export analysis" });
     }
   });
-
+  
   // Analyze URL endpoint with quota checking and reservation
   apiRouter.post("/analyze", checkAndReserveQuota(), addQuotaToResponse(), async (req, res) => {
-    const tenantContext = req.tenantContext as TenantContext;
+    const tenantContext = req.tenantContext!;
     const requestId = req.auditRequestId!;
     
     try {
       // Validate request
-      const auditRequest = AuditRequest.parse(req.body);
+      const auditRequest = AuditRequest.parse({
+        ...req.body,
+        userId: req.tenantContext?.userId,
+      });
       const { url } = auditRequest;
-      const tenantIdHeader = req.header("x-tenant-id");
-      const userIdHeader = req.header("x-user-id");
-      if (!tenantIdHeader || !userIdHeader) {
-        throw createHttpError("Authentication required", 401);
-      }
-      if (tenantIdHeader !== String(tenantContext.tenantId)) {
-        throw createHttpError("Tenant mismatch", 403);
-      }
 
-      const userRoleHeader = (req.header("x-tenant-role") || "member").toLowerCase();
-      if (userRoleHeader === "read-only") {
+      if (tenantContext.role === "read-only") {
         throw createHttpError("Insufficient role for this action", 403);
       }
 
