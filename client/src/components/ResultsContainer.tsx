@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AnalysisResult } from "@shared/schema";
+import { AnalysisResult, MetaTag } from "@shared/schema";
 import TagsTable from "./TagsTable";
 import RecommendationsList from "./RecommendationsList";
 
@@ -22,6 +22,7 @@ export default function ResultsContainer({ isVisible, results }: ResultsContaine
   const recentAnalyses = results.recentAnalyses || [];
   const usage = results.usage;
   const plan = results.plan;
+  const missingTags = tags.filter(tag => !tag.isPresent);
 
   // Function to determine the color of the health score
   const getHealthScoreColor = (score: number) => {
@@ -59,6 +60,16 @@ export default function ResultsContainer({ isVisible, results }: ResultsContaine
     });
   };
 
+  const getTagDisplayName = (tag: MetaTag) => {
+    if (tag.name === "title") return "title";
+    if (tag.name) return tag.name;
+    if (tag.property) return tag.property;
+    if (tag.rel) return tag.rel;
+    if (tag.httpEquiv) return tag.httpEquiv;
+    if (tag.charset) return "charset";
+    return "unknown";
+  };
+
   // Function to filter tags based on active tab
   const getFilteredTags = () => {
     switch (activeTab) {
@@ -94,6 +105,10 @@ export default function ResultsContainer({ isVisible, results }: ResultsContaine
           <div>
             <h2 className="text-xl font-semibold text-slate-800">Meta Tags Summary</h2>
             <p className="text-slate-600">{analysis.url}</p>
+            <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+              <Clock className="h-4 w-4" />
+              <span>Audited on {formatRunTimestamp(analysis.timestamp)}</span>
+            </div>
           </div>
           <div className="mt-3 sm:mt-0">
             <Button
@@ -228,6 +243,33 @@ export default function ResultsContainer({ isVisible, results }: ResultsContaine
           )}
         </div>
       )}
+
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800">Missing tags</h3>
+            <p className="text-sm text-slate-600">Review the tags this audit could not find</p>
+          </div>
+          <Badge variant={missingTags.length === 0 ? "secondary" : "destructive"}>
+            {missingTags.length === 0 ? "All present" : `${missingTags.length} missing`}
+          </Badge>
+        </div>
+        {missingTags.length > 0 ? (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {missingTags.map((tag, index) => (
+              <span
+                key={tag.id || `${getTagDisplayName(tag)}-${index}`}
+                className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-sm text-secondary border border-orange-200"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                {getTagDisplayName(tag)}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-600 mt-4">No missing tags detected in this run.</p>
+        )}
+      </div>
 
       {/* Tag Categories Tabs */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
