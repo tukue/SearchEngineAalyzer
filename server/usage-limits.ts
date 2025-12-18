@@ -124,7 +124,7 @@ export class UsageLimitsService {
   /**
    * Mark audit as failed and clean up reserved quota
    */
-  static async failAudit(tenantId: number, requestId: string, releaseQuota: boolean = true): Promise<void> {
+  static async failAudit(tenantId: number, requestId: string, releaseQuota: boolean = false): Promise<void> {
     try {
       await storage.updateUsageLedgerEntry(tenantId, requestId, "failed");
       
