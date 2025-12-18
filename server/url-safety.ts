@@ -78,7 +78,7 @@ function isPrivateAddress(address: string, family?: number): boolean {
     return (
       normalized === "::1" ||
       normalized === "::" ||
-      normalized.startsWith("fc00:") ||
+      normalized.startsWith("fc") || // fc00::/7 unique local
       normalized.startsWith("fd") ||
       normalized.startsWith("fe80:") ||
       normalized.startsWith("ff") || // multicast
@@ -109,6 +109,15 @@ export async function validatePublicHttpsUrl(rawUrl: string, logContext?: string
   }
 
   const hostname = parsedUrl.hostname;
+
+  const literalFamily = net.isIP(hostname);
+  if (literalFamily) {
+    if (isPrivateAddress(hostname, literalFamily)) {
+      logBlockedAttempt("literal address is private or reserved", rawUrl, logContext);
+      throw createHttpError("Target host is not allowed");
+    }
+    return parsedUrl;
+  }
 
   if (isBlockedHostname(hostname)) {
     logBlockedAttempt("localhost or reserved hostname", rawUrl, logContext);
