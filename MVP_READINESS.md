@@ -86,3 +86,78 @@ Lean assessment of the current MVP (URL → audit → stored result → report) 
 ## Go / No-Go
 - **Recommendation: NO-GO** until the P0 blockers are addressed.  
 - After completing the Minimum Action Plan items 1–6, re-evaluate; item 7 can be parallelized if time permits but should not block if a basic share flow is acceptable post-MVP.
+
+## Final MVP Feature List (Must-Have Only)
+### Core Product Flow
+- **Feature: Durable audit pipeline (P0)**  
+  - Problem: Audits and quotas reset on restart; inline audits can hang.  
+  - User value: Reliable “submit → audit → view” without lost history.  
+  - Acceptance: Audit requests persist to DB with requestId; audit completes or fails with status; restart does not lose completed audits or quota reservations.
+- **Feature: Safe URL intake (P0)**  
+  - Problem: SSRF/localhost risk and unbounded fetches.  
+  - User value: Safe, predictable audits.  
+  - Acceptance: Reject non-HTTPS and private/localhost targets; enforce fetch timeout and max body size; log blocked attempts.
+- **Feature: Authenticated submissions (P0)**  
+  - Problem: Anyone can run audits using default tenant.  
+  - User value: Only authorized users consume quota and see history.  
+  - Acceptance: Write routes require auth/token; tenant context derived from identity on every request.
+
+### UX & Clarity
+- **Feature: Report visibility (P1)**  
+  - Problem: Unknown if client surfaces scores/missing tags/recs.  
+  - User value: Clear, actionable report.  
+  - Acceptance: Report page shows audited URL, timestamp, scores, missing tags, recommendations; loading/error states visible.
+- **Feature: Shareable read-only report (P1)**  
+  - Problem: No way to share results safely.  
+  - User value: Can share findings without edit risk.  
+  - Acceptance: Signed tokenized link renders read-only report; token expiry or revocation supported.
+
+### Reliability & Error Handling
+- **Feature: Backpressure and retries (P0)**  
+  - Problem: No rate limits; inline audits can overwhelm the server.  
+  - User value: Responsive app under load.  
+  - Acceptance: Per-tenant/IP rate limit ahead of audit; per-request timeout and limited retries with jitter; queue/semaphore caps concurrency.
+- **Feature: Status and failure surfacing (P1)**  
+  - Problem: Users can’t tell if audit queued/running/failed.  
+  - User value: Transparency on progress and errors.  
+  - Acceptance: API and UI expose queued/running/failed/complete; failed audits show reason and allow resubmit.
+
+### Security & Trust
+- **Feature: SSRF and network controls (P0)**  
+  - Problem: Audits can hit internal networks.  
+  - User value: Trustworthy tool that doesn’t exfiltrate.  
+  - Acceptance: Explicit blocklist for private/loopback/reserved IPs; DNS re-resolution per request; HTTPS-only.
+- **Feature: Tenant-scoped quotas (P0)**  
+  - Problem: Quota bypass after restart.  
+  - User value: Fair, predictable limits.  
+  - Acceptance: Quota ledger persisted in DB; repeat requestId is idempotent and returns prior result without double-charging.
+
+### Launch Essentials (Onboarding, Limits, Feedback)
+- **Feature: Usage feedback in UI (P1)**  
+  - Problem: Users don’t know remaining quota.  
+  - User value: Avoids surprise lockouts.  
+  - Acceptance: UI surfaces remaining audits for the period; 80/90/100% warnings returned by API and shown in UI.
+- **Feature: Smoke test coverage (P1)**  
+  - Problem: No automated proof of primary flow.  
+  - User value: Prevents regressions pre-launch.  
+  - Acceptance: CI test submits URL → audit completes (mocked network OK) → report retrieved.
+
+## Launch Blockers Summary (P0)
+- Durable DB-backed storage for audits/quota (no in-memory resets).
+- HTTPS-only + private-network blocking with timeouts/size limits.
+- Authenticated submissions with tenant-derived context.
+- Per-tenant/IP rate limiting and concurrency caps.
+- Persisted quota ledger with idempotent requestIds.
+
+## MVP Definition of Done
+- All P0 items above implemented, tested, and enabled in production config.
+- P1 items for report visibility, status surfacing, usage feedback, share links, and smoke test in place or explicitly waived with documented rationale.
+- CI passes including smoke test; manual sanity confirms submit → audit → view with persisted data.
+- Security checks: SSRF protections verified; auth required on write; logs capture blocked requests.
+
+## Out of Scope for Launch
+- Scheduled audits, alerts, or trend dashboards.
+- Team roles/SSO/SCIM.
+- Webhooks and external integrations.
+- Advanced analytics or AI insights.
+- Full PDF/export pipeline beyond the core report view.
