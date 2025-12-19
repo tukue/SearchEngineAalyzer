@@ -1,12 +1,11 @@
 {
-  "extends": "../tsconfig.json",
+  "extends": "next/tsconfig",
   "compilerOptions": {
-    "baseUrl": "..",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"]
-    },
-    "types": ["next", "next/types/global"]
+      "@/*": ["../client/src/*"],
+      "@shared/*": ["../shared/*"]
+    }
   },
   "include": [
     "next-env.d.ts",
