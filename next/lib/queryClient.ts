@@ -7,15 +7,12 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-const defaultTenantHeaders: Record<string, string> = {
-  get Authorization() {
-    const token =
-      process.env.NEXT_PUBLIC_API_TOKEN ?? process.env.VITE_API_TOKEN ?? ""
-    if (!token) {
-      throw new Error("NEXT_PUBLIC_API_TOKEN environment variable is required")
-    }
-    return `Bearer ${token}`
-  },
+const defaultTenantHeaders: Record<string, string> = {}
+
+const apiToken = process.env.API_TOKEN
+
+if (apiToken) {
+  defaultTenantHeaders.Authorization = `Bearer ${apiToken}`
 }
 
 export async function apiRequest(

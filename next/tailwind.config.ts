@@ -7,8 +7,6 @@ const config: Config = {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./hooks/**/*.{js,ts,jsx,tsx,mdx}",
     "./lib/**/*.{js,ts,jsx,tsx,mdx}",
-    "../client/index.html",
-    "../client/src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
