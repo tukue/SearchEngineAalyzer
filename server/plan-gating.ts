@@ -91,12 +91,3 @@ async function getCurrentUsage(tenantId: number, quotaType: string): Promise<num
   const usage = await storage.getMonthlyUsage(tenantId, period);
   return usage?.enqueuedCount || 0;
 }
-
-// Extend Express Request type
-declare global {
-  namespace Express {
-    interface Request {
-      tenantContext?: TenantContext;
-    }
-  }
-}

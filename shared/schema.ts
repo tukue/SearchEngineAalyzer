@@ -22,6 +22,17 @@ export const PLAN_CONFIGS = {
 
 export type PlanType = keyof typeof PLAN_CONFIGS;
 export type PlanConfig = typeof PLAN_CONFIGS[PlanType];
+export type PlanId = PlanType;
+export type Plan = {
+  id: PlanId;
+  label: string;
+  monthlyQuota: number;
+  features: {
+    exports: boolean;
+    historyDepth: number;
+    webhooks: boolean;
+  };
+};
 
 // Tenants model
 export const tenants = pgTable("tenants", {
@@ -140,8 +151,8 @@ export type UsageTracking = typeof usageTracking.$inferSelect;
 export type UsageLedger = typeof usageLedger.$inferSelect;
 export type MonthlyUsage = typeof monthlyUsage.$inferSelect;
 export type MetaTag = typeof metaTags.$inferSelect;
-export type Analysis = typeof analyses.$inferSelect;
-export type Recommendation = typeof recommendations.$inferSelect;
+export type Analysis = typeof analyses.$inferSelect & { userId?: string; auditType?: string };
+export type Recommendation = typeof recommendations.$inferSelect & { tenantId?: number };
 
 // Request and response type for analysis
 export const urlSchema = z.object({
@@ -155,6 +166,9 @@ export type AnalysisResult = {
   tags: MetaTag[];
   recommendations: Recommendation[];
   quota?: QuotaStatus;
+  usage?: UsageSnapshot;
+  plan?: Plan;
+  recentAnalyses?: Analysis[];
 };
 
 // Plan gating error types
@@ -179,6 +193,16 @@ export const QuotaStatus = z.object({
 });
 
 export type QuotaStatus = z.infer<typeof QuotaStatus>;
+
+export type UsageSnapshot = {
+  tenantId: string;
+  month: string;
+  count: number;
+  limit: number;
+  remaining: number;
+  warnings: string[];
+  planId: PlanId;
+};
 
 // Audit request with idempotency
 export const AuditRequest = z.object({

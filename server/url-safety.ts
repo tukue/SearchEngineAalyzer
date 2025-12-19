@@ -1,4 +1,5 @@
 import dns from "dns/promises";
+import type { LookupAddress } from "dns";
 import net from "net";
 import fetch, { type RequestInit, type Response } from "node-fetch";
 
@@ -124,7 +125,7 @@ export async function validatePublicHttpsUrl(rawUrl: string, logContext?: string
     throw createHttpError("Target host is not allowed");
   }
 
-  let lookupResults: dns.LookupAddress[];
+  let lookupResults: LookupAddress[];
   try {
     lookupResults = await dns.lookup(hostname, { all: true });
   } catch (error) {
@@ -158,7 +159,6 @@ export async function fetchWithNetworkLimits(
     return await fetch(targetUrl, {
       ...fetchOptions,
       signal: controller.signal,
-      // @ts-expect-error: node-fetch supports size to limit body length
       size: maxBytes,
     });
   } catch (error) {

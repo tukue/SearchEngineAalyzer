@@ -1,9 +1,12 @@
 import { MemStorage } from '../storage';
-import { AnalysisResult } from '../../shared/schema';
+import { Analysis, AnalysisResult } from '../../shared/schema';
+
+type CreateAnalysisInput = Omit<AnalysisResult, 'analysis'> & { analysis: Omit<Analysis, 'id' | 'tenantId'> };
 
 describe('MemStorage', () => {
   let storage: MemStorage;
-  const tenantId = 'test-tenant';
+  const tenantId = 1;
+  const otherTenantId = 2;
   const userId = 'user-1';
 
   beforeEach(() => {
@@ -11,14 +14,12 @@ describe('MemStorage', () => {
   });
 
   describe('createAnalysis', () => {
-    it('should create and store an analysis with its associated data', async () => {
-      const analysisData: AnalysisResult = {
-        analysis: {
-          id: 0,
-          tenantId,
-          userId,
-          auditType: 'meta',
-          url: 'https://example.com',
+      it('should create and store an analysis with its associated data', async () => {
+        const analysisData: CreateAnalysisInput = {
+          analysis: {
+            userId,
+            auditType: 'meta',
+            url: 'https://example.com',
           totalCount: 5,
           seoCount: 2,
           socialCount: 1,
@@ -67,7 +68,7 @@ describe('MemStorage', () => {
         ]
       };
 
-      const result = await storage.createAnalysis(analysisData);
+      const result = await storage.createAnalysis(tenantId, analysisData);
 
       expect(result).toBeDefined();
       expect(result.analysis.id).toBe(1);
@@ -79,14 +80,12 @@ describe('MemStorage', () => {
   });
 
   describe('getAnalysis', () => {
-    it('should retrieve an analysis by ID', async () => {
-      const analysisData: AnalysisResult = {
-        analysis: {
-          id: 0,
-          tenantId,
-          userId,
-          auditType: 'meta',
-          url: 'https://example.com',
+      it('should retrieve an analysis by ID', async () => {
+        const analysisData: CreateAnalysisInput = {
+          analysis: {
+            userId,
+            auditType: 'meta',
+            url: 'https://example.com',
           totalCount: 5,
           seoCount: 2,
           socialCount: 1,
@@ -113,10 +112,10 @@ describe('MemStorage', () => {
         recommendations: []
       };
 
-      const created = await storage.createAnalysis(analysisData);
+      const created = await storage.createAnalysis(tenantId, analysisData);
       const id = created.analysis.id;
 
-      const retrieved = await storage.getAnalysis(id, tenantId);
+      const retrieved = await storage.getAnalysis(tenantId, id);
 
       expect(retrieved).toBeDefined();
       expect(retrieved?.analysis.url).toBe('https://example.com');
@@ -124,44 +123,40 @@ describe('MemStorage', () => {
     });
 
     it('should return undefined for non-existent ID', async () => {
-      const result = await storage.getAnalysis(999, tenantId);
+      const result = await storage.getAnalysis(tenantId, 999);
       expect(result).toBeUndefined();
     });
 
-    it('should enforce tenant isolation when retrieving by ID', async () => {
-      const created = await storage.createAnalysis({
-        analysis: {
-          id: 0,
-          tenantId,
-          userId,
-          auditType: 'meta',
-          url: 'https://isolated.com',
-          totalCount: 1,
-          seoCount: 1,
-          socialCount: 0,
-          technicalCount: 0,
-          missingCount: 0,
-          healthScore: 90,
-          timestamp: new Date().toISOString(),
-        },
-        tags: [],
-        recommendations: [],
+      it('should enforce tenant isolation when retrieving by ID', async () => {
+        const created = await storage.createAnalysis(tenantId, {
+          analysis: {
+            userId,
+            auditType: 'meta',
+            url: 'https://isolated.com',
+            totalCount: 1,
+            seoCount: 1,
+            socialCount: 0,
+            technicalCount: 0,
+            missingCount: 0,
+            healthScore: 90,
+            timestamp: new Date().toISOString(),
+          },
+          tags: [],
+          recommendations: [],
+        });
+
+        const result = await storage.getAnalysis(otherTenantId, created.analysis.id);
+        expect(result).toBeUndefined();
       });
-
-      const result = await storage.getAnalysis(created.analysis.id, 'other-tenant');
-      expect(result).toBeUndefined();
-    });
   });
 
   describe('getAnalysisByUrl', () => {
-    it('should retrieve an analysis by URL', async () => {
-      const analysisData: AnalysisResult = {
-        analysis: {
-          id: 0,
-          tenantId,
-          userId,
-          auditType: 'meta',
-          url: 'https://example.com',
+      it('should retrieve an analysis by URL', async () => {
+        const analysisData: CreateAnalysisInput = {
+          analysis: {
+            userId,
+            auditType: 'meta',
+            url: 'https://example.com',
           totalCount: 3,
           seoCount: 1,
           socialCount: 1,
@@ -188,9 +183,9 @@ describe('MemStorage', () => {
         recommendations: []
       };
 
-      await storage.createAnalysis(analysisData);
+      await storage.createAnalysis(tenantId, analysisData);
 
-      const retrieved = await storage.getAnalysisByUrl('https://example.com', tenantId);
+      const retrieved = await storage.getAnalysisByUrl(tenantId, 'https://example.com');
 
       expect(retrieved).toBeDefined();
       expect(retrieved?.analysis.totalCount).toBe(3);
@@ -198,7 +193,7 @@ describe('MemStorage', () => {
     });
 
     it('should return undefined for non-existent URL', async () => {
-      const result = await storage.getAnalysisByUrl('https://nonexistent.com', tenantId);
+      const result = await storage.getAnalysisByUrl(tenantId, 'https://nonexistent.com');
       expect(result).toBeUndefined();
     });
   });
