@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx server/index.ts",
-    "next:dev": "next dev ./next -p 3001",
+    "next:dev": "npm --prefix next run dev -- --port 3001",
     "dev:compare": "sh -c 'npm run dev -- --host --port 5173 & npm run next:dev'",
     "build": "npx vite build && npx esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "vercel-build": "npx vite build",
@@ -67,7 +67,6 @@
     "lucide-react": "^0.453.0",
     "memorystore": "^1.6.7",
     "node-fetch": "^3.3.2",
-    "next": "14.2.13",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "react": "^18.3.1",
