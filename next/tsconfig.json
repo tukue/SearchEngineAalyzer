@@ -3,13 +3,15 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["../client/src/*"],
+      "@/*": ["./app/*", "./components/*", "../client/src/*"],
       "@shared/*": ["../shared/*"]
     }
   },
   "include": [
     "next-env.d.ts",
     "app/**/*",
+    "components/**/*",
+    "pages/**/*",
     "../client/src/**/*",
     "../shared/**/*"
   ],
