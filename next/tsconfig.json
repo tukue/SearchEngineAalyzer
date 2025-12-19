@@ -4,7 +4,8 @@
     "baseUrl": "..",
     "paths": {
       "@/*": ["client/src/*"],
-      "@shared/*": ["shared/*"]
+      "@shared/*": ["shared/*"],
+      "@server/*": ["server/*"]
     },
     "types": [
       "node",
@@ -23,6 +24,9 @@
   "include": [
     "next-env.d.ts",
     "app/**/*",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "../client/src/**/*",
+    "../shared/**/*",
+    "../server/**/*"
   ]
 }

@@ -4,7 +4,7 @@ import * as cheerio from "cheerio";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { urlSchema, type AnalysisResult, type MetaTag } from "@shared/schema";
-import { storage } from "../../../../server/storage";
+import { storage } from "@server/storage";
 
 const importantSeoTags = ["title", "description", "keywords", "viewport", "canonical"];
 const importantSocialTags = [
