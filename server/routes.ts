@@ -1,14 +1,15 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage, getDefaultTenantContext } from "./storage";
-import { requireEntitlement, checkQuota, PlanGatingService } from "./plan-gating";
+import { storage } from "./storage";
+import { requireEntitlement, PlanGatingService } from "./plan-gating";
 import { checkAndReserveQuota, addQuotaToResponse, UsageLimitsService } from "./usage-limits";
 import express from "express";
 import { urlSchema, AuditRequest, PLAN_CONFIGS, TenantContext } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
-import fetch from "node-fetch";
+import { fetchWithNetworkLimits, validatePublicHttpsUrl, createHttpError } from "./url-safety";
 import * as cheerio from "cheerio";
+import { requireAuthContext } from "./context";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
@@ -40,7 +41,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       version: "1.0.0"
     });
   });
-  
+
+  apiRouter.use(requireAuthContext);
+
   // Get current plan and entitlements with quota status
   apiRouter.get("/plan", async (req, res) => {
     try {
@@ -119,42 +122,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to export analysis" });
     }
   });
-
+  
   // Analyze URL endpoint with quota checking and reservation
   apiRouter.post("/analyze", checkAndReserveQuota(), addQuotaToResponse(), async (req, res) => {
-    const tenantContext = req.tenantContext as TenantContext;
+    const tenantContext = req.tenantContext!;
     const requestId = req.auditRequestId!;
     
     try {
       // Validate request
-      const auditRequest = AuditRequest.parse(req.body);
+      const auditRequest = AuditRequest.parse({
+        ...req.body,
+        userId: req.tenantContext?.userId,
+      });
       const { url } = auditRequest;
-      
-      let normalizedUrl = url;
-      if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
-        normalizedUrl = "https://" + normalizedUrl;
+
+      if (tenantContext.role === "read-only") {
+        throw createHttpError("Insufficient role for this action", 403);
       }
-      
-      // Fetch the website content
+
+      const parsedUrl = await validatePublicHttpsUrl(url, `tenant=${tenantContext.tenantId}`);
+      const normalizedUrl = parsedUrl.toString();
+
       let response;
       try {
-        response = await fetch(normalizedUrl, {
+        response = await fetchWithNetworkLimits(normalizedUrl, {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; MetaTagAnalyzer/1.0)'
-          }
+            "User-Agent": "Mozilla/5.0 (compatible; MetaTagAnalyzer/1.0)",
+          },
         });
-        
-        if (!response.ok) {
-          return res.status(400).json({ 
-            message: `Failed to fetch website: ${response.status} ${response.statusText}` 
-          });
-        }
       } catch (error) {
-        return res.status(400).json({ 
-          message: `Failed to connect to the website: ${error instanceof Error ? error.message : String(error)}` 
-        });
+        throw createHttpError(
+          `Failed to connect to the website: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
-      
+
+      if (!response.ok) {
+        throw createHttpError(`Failed to fetch website: ${response.status} ${response.statusText}`);
+      }
+
       const html = await response.text();
       
       // Parse meta tags
@@ -445,6 +450,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const validationError = fromZodError(error);
         return res.status(400).json({ message: validationError.message || "Invalid request format" });
       }
+
+      if ((error as any).status) {
+        return res.status((error as any).status).json({ message: (error as Error).message });
+      }
+
       console.error("Error analyzing website:", error);
       res.status(500).json({ message: "Failed to analyze website" });
     }
