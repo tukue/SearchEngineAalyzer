@@ -10,10 +10,19 @@ import { fromZodError } from "zod-validation-error";
 import { fetchWithNetworkLimits, validatePublicHttpsUrl, createHttpError } from "./url-safety";
 import * as cheerio from "cheerio";
 import { requireAuthContext } from "./context";
+import { isNextApiEnabled } from "./next-api-flags";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   const apiRouter = express.Router();
+
+  const nextApiFlags = {
+    plan: isNextApiEnabled("plan"),
+    quota: isNextApiEnabled("quota"),
+    history: isNextApiEnabled("history"),
+    analyze: isNextApiEnabled("analyze"),
+    export: isNextApiEnabled("export"),
+  };
 
   // Health check endpoint for CI/CD
   apiRouter.get("/health", (req, res) => {
@@ -28,90 +37,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.use(requireAuthContext);
 
   // Get current plan and entitlements with quota status
-  apiRouter.get("/plan", async (req, res) => {
-    try {
-      const tenantContext = req.tenantContext as TenantContext;
-      const planConfig = PLAN_CONFIGS[tenantContext.plan];
-      const quotaStatus = await UsageLimitsService.getQuotaStatus(tenantContext.tenantId);
-      
-      res.json({
-        currentPlan: tenantContext.plan,
-        entitlements: planConfig,
-        tenantId: tenantContext.tenantId,
-        quota: quotaStatus
-      });
-    } catch (error) {
-      console.error("Error fetching plan info:", error);
-      res.status(500).json({ message: "Failed to fetch plan information" });
-    }
-  });
+  if (!nextApiFlags.plan) {
+    apiRouter.get("/plan", async (req, res) => {
+      try {
+        const tenantContext = req.tenantContext as TenantContext;
+        const planConfig = PLAN_CONFIGS[tenantContext.plan];
+        const quotaStatus = await UsageLimitsService.getQuotaStatus(tenantContext.tenantId);
+
+        res.json({
+          currentPlan: tenantContext.plan,
+          entitlements: planConfig,
+          tenantId: tenantContext.tenantId,
+          quota: quotaStatus
+        });
+      } catch (error) {
+        console.error("Error fetching plan info:", error);
+        res.status(500).json({ message: "Failed to fetch plan information" });
+      }
+    });
+  }
   
   // Get current quota status
-  apiRouter.get("/quota", async (req, res) => {
-    try {
-      const tenantContext = req.tenantContext as TenantContext;
-      const quotaStatus = await UsageLimitsService.getQuotaStatus(tenantContext.tenantId);
-      
-      res.json(quotaStatus);
-    } catch (error) {
-      console.error("Error fetching quota status:", error);
-      res.status(500).json({ message: "Failed to fetch quota status" });
-    }
-  });
+  if (!nextApiFlags.quota) {
+    apiRouter.get("/quota", async (req, res) => {
+      try {
+        const tenantContext = req.tenantContext as TenantContext;
+        const quotaStatus = await UsageLimitsService.getQuotaStatus(tenantContext.tenantId);
+
+        res.json(quotaStatus);
+      } catch (error) {
+        console.error("Error fetching quota status:", error);
+        res.status(500).json({ message: "Failed to fetch quota status" });
+      }
+    });
+  }
   
   // Get analysis history with plan-based depth limiting
-  apiRouter.get("/history", async (req, res) => {
-    try {
-      const tenantContext = req.tenantContext as TenantContext;
-      const historyDepth = PlanGatingService.getQuotaLimit(tenantContext, 'historyDepth');
-      
-      const history = await storage.getAnalysisHistory(tenantContext.tenantId, historyDepth);
-      
-      res.json({
-        analyses: history,
-        limit: historyDepth,
-        currentPlan: tenantContext.plan
-      });
-    } catch (error) {
-      console.error("Error fetching history:", error);
-      res.status(500).json({ message: "Failed to fetch analysis history" });
-    }
-  });
+  if (!nextApiFlags.history) {
+    apiRouter.get("/history", async (req, res) => {
+      try {
+        const tenantContext = req.tenantContext as TenantContext;
+        const historyDepth = PlanGatingService.getQuotaLimit(tenantContext, 'historyDepth');
+
+        const history = await storage.getAnalysisHistory(tenantContext.tenantId, historyDepth);
+
+        res.json({
+          analyses: history,
+          limit: historyDepth,
+          currentPlan: tenantContext.plan
+        });
+      } catch (error) {
+        console.error("Error fetching history:", error);
+        res.status(500).json({ message: "Failed to fetch analysis history" });
+      }
+    });
+  }
   
   // Export analysis (gated feature)
-  apiRouter.post("/export/:id", requireEntitlement('exportsEnabled'), async (req, res) => {
-    try {
-      const tenantContext = req.tenantContext as TenantContext;
-      const analysisId = parseInt(req.params.id);
-      const format = req.body.format || 'json'; // json, pdf, html
-      
-      const analysis = await storage.getAnalysis(tenantContext.tenantId, analysisId);
-      if (!analysis) {
-        return res.status(404).json({ message: "Analysis not found" });
+  if (!nextApiFlags.export) {
+    apiRouter.post("/export/:id", requireEntitlement('exportsEnabled'), async (req, res) => {
+      try {
+        const tenantContext = req.tenantContext as TenantContext;
+        const analysisId = parseInt(req.params.id);
+        const format = req.body.format || 'json'; // json, pdf, html
+
+        const analysis = await storage.getAnalysis(tenantContext.tenantId, analysisId);
+        if (!analysis) {
+          return res.status(404).json({ message: "Analysis not found" });
+        }
+
+        // Increment export usage
+        await storage.incrementUsage(tenantContext.tenantId, 'export');
+
+        // For MVP, just return the analysis data
+        // In production, this would generate PDF/HTML exports
+        res.json({
+          message: "Export generated successfully",
+          format,
+          data: analysis
+        });
+      } catch (error) {
+        console.error("Error exporting analysis:", error);
+        res.status(500).json({ message: "Failed to export analysis" });
       }
-      
-      // Increment export usage
-      await storage.incrementUsage(tenantContext.tenantId, 'export');
-      
-      // For MVP, just return the analysis data
-      // In production, this would generate PDF/HTML exports
-      res.json({
-        message: "Export generated successfully",
-        format,
-        data: analysis
-      });
-    } catch (error) {
-      console.error("Error exporting analysis:", error);
-      res.status(500).json({ message: "Failed to export analysis" });
-    }
-  });
+    });
+  }
   
   // Analyze URL endpoint with quota checking and reservation
-  apiRouter.post("/analyze", checkAndReserveQuota(), addQuotaToResponse(), async (req, res) => {
-    const tenantContext = req.tenantContext!;
-    const requestId = req.auditRequestId!;
-    
-    try {
+  if (!nextApiFlags.analyze) {
+    apiRouter.post("/analyze", checkAndReserveQuota(), addQuotaToResponse(), async (req, res) => {
+      const tenantContext = req.tenantContext!;
+      const requestId = req.auditRequestId!;
+
+      try {
       // Validate request
       const auditRequest = AuditRequest.parse({
         ...req.body,
@@ -442,6 +460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to analyze website" });
     }
   });
+  }
   
   app.use("/api", apiRouter);
   
