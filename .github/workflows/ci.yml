@@ -25,7 +25,7 @@ jobs:
     
     - name: Install dependencies
       run: npm ci
-    
+
     - name: Run linting
       run: npm run lint || echo "Linting skipped"
     
@@ -43,10 +43,6 @@ jobs:
     
     - name: Build application
       run: npm run build --if-present
-
-    - name: Install Next.js dependencies
-      run: npm ci
-      working-directory: next
 
     - name: Lint Next.js app
       run: npm run lint

@@ -47,17 +47,33 @@ type MetaTagEntry = {
 };
 
 async function fetchPageContent(url: string): Promise<string> {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; MetaTagAnalyzer/1.0)"
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; MetaTagAnalyzer/1.0)"
+      },
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch website: ${response.status} ${response.statusText}`);
     }
-  });
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch website: ${response.status} ${response.statusText}`);
+    const contentLengthHeader = response.headers.get("content-length");
+    if (contentLengthHeader) {
+      const contentLength = Number(contentLengthHeader);
+      if (!Number.isNaN(contentLength) && contentLength > 5 * 1024 * 1024) {
+        throw new Error("Response too large");
+      }
+    }
+
+    return await response.text();
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  return await response.text();
 }
 
 function buildRecommendations(tag: string): { tagName: string; description: string; example: string } | null {
