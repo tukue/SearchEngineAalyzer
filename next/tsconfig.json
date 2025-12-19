@@ -2,6 +2,10 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "baseUrl": "..",
+    "paths": {
+      "@/*": ["client/src/*"],
+      "@shared/*": ["shared/*"]
+    },
     "types": [
       "node",
       "next",
