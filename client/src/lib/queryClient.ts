@@ -7,11 +7,26 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+function getApiToken() {
+  if (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_TOKEN) {
+    return process.env.NEXT_PUBLIC_API_TOKEN;
+  }
+
+  if (
+    typeof import.meta !== "undefined" &&
+    (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_TOKEN
+  ) {
+    return (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_TOKEN;
+  }
+
+  return undefined;
+}
+
 const defaultTenantHeaders: Record<string, string> = {
   get Authorization() {
-    const token = import.meta.env.VITE_API_TOKEN;
+    const token = getApiToken();
     if (!token) {
-      throw new Error("VITE_API_TOKEN environment variable is required");
+      throw new Error("API token environment variable is required");
     }
     return `Bearer ${token}`;
   },
