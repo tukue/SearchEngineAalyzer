@@ -95,7 +95,13 @@ export const metaTags = pgTable("meta_tags", {
 // Analysis results model
 export const analyses = pgTable("analyses", {
   id: serial("id").primaryKey(),
+<<<<<<< HEAD
+  tenantId: text("tenant_id").notNull().default(""),
+  userId: text("user_id").notNull().default(""),
+  auditType: text("audit_type").notNull().default("meta"),
+=======
   tenantId: integer("tenant_id").notNull(),
+>>>>>>> origin/main
   url: text("url").notNull(),
   totalCount: integer("total_count").notNull(),
   seoCount: integer("seo_count").notNull(),

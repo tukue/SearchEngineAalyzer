@@ -87,9 +87,21 @@ export function checkQuota(quotaType: "monthlyAuditLimit") {
 
 // Helper function to get current usage
 async function getCurrentUsage(tenantId: number, quotaType: string): Promise<number> {
+<<<<<<< HEAD
+  const { storage } = await import('./storage');
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const usage = await storage.getCurrentUsage(tenantId, currentMonth);
+  
+  if (quotaType === 'monthlyAuditLimit') {
+    return usage?.auditCount || 0;
+  }
+  
+  return 0;
+=======
   const period = new Date().toISOString().slice(0, 7);
   const usage = await storage.getMonthlyUsage(tenantId, period);
   return usage?.enqueuedCount || 0;
+>>>>>>> origin/main
 }
 
 // Extend Express Request type

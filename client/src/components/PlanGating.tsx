@@ -32,9 +32,19 @@ export function usePlanInfo() {
 
   useEffect(() => {
     fetch('/api/plan')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
-        setPlanInfo(data);
+        // Validate response structure
+        if (data && typeof data.currentPlan === 'string' && data.entitlements) {
+          setPlanInfo(data);
+        } else {
+          throw new Error('Invalid plan data structure');
+        }
         setLoading(false);
       })
       .catch(err => {
