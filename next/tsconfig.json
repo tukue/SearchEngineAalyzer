@@ -1,0 +1,23 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "next",
+      "next/image-types/global"
+    ],
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "next-env.d.ts",
+    "app/**/*",
+    ".next/types/**/*.ts"
+  ]
+}
