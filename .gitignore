@@ -2,5 +2,7 @@ node_modules
 dist
 .DS_Store
 server/public
+coverage
+next/.next
 vite.config.ts.*
 *.tar.gz

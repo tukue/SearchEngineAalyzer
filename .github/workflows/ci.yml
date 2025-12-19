@@ -43,3 +43,15 @@ jobs:
     
     - name: Build application
       run: npm run build --if-present
+
+    - name: Install Next.js dependencies
+      run: npm ci
+      working-directory: next
+
+    - name: Lint Next.js app
+      run: npm run lint
+      working-directory: next
+
+    - name: Build Next.js app
+      run: npm run build
+      working-directory: next
