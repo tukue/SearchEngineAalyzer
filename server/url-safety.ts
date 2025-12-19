@@ -1,10 +1,12 @@
 import dns from "dns/promises";
 import type { LookupAddress } from "dns";
 import net from "net";
-import fetch, { type RequestInit, type Response } from "node-fetch";
+import type { RequestInit, Response } from "node-fetch";
 
 const DEFAULT_TIMEOUT_MS = 8000;
 const DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024; // 2MB
+
+type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
 
 type FetchWithNetworkLimitsOptions = RequestInit & {
   timeoutMs?: number;
@@ -15,6 +17,16 @@ type FetchWithNetworkLimitsOptions = RequestInit & {
 function safetyLog(message: string) {
   const timestamp = new Date().toISOString();
   console.log(`${timestamp} [url-safety] ${message}`);
+}
+
+let cachedFetchPromise: Promise<Fetcher> | null = null;
+
+async function loadFetch(): Promise<Fetcher> {
+  if (!cachedFetchPromise) {
+    cachedFetchPromise = import("node-fetch").then((mod) => (mod.default ?? mod) as Fetcher);
+  }
+
+  return cachedFetchPromise;
 }
 
 export function createHttpError(message: string, status = 400): Error {
@@ -149,6 +161,7 @@ export async function fetchWithNetworkLimits(
   targetUrl: string,
   options: FetchWithNetworkLimitsOptions = {},
 ): Promise<Response> {
+  const fetch = await loadFetch();
   const { timeoutMs = DEFAULT_TIMEOUT_MS, maxBytes = DEFAULT_MAX_RESPONSE_BYTES, logContext, ...fetchOptions } =
     options;
 

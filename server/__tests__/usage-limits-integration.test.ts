@@ -6,13 +6,55 @@ import { PLAN_CONFIGS } from "@shared/schema";
 
 // Mock the storage module
 jest.mock("../storage", () => {
-  const mockStorage = new (jest.requireActual("../storage").MemStorage)();
+  let mockStorage = new (jest.requireActual("../storage").MemStorage)();
+  const actual = jest.requireActual("../storage");
+
   return {
-    storage: mockStorage,
+    get storage() {
+      return mockStorage;
+    },
+    set storage(value) {
+      mockStorage = value;
+    },
+    MemStorage: actual.MemStorage,
     getDefaultTenantContext: async () => ({
       tenantId: 1,
       plan: "free"
     })
+  } as typeof import("../storage");
+});
+
+jest.mock("../url-safety", () => {
+  const actual = jest.requireActual("../url-safety");
+
+  const validatePublicHttpsUrl = jest.fn(async (rawUrl: string) => {
+    try {
+      return new URL(rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`);
+    } catch {
+      throw actual.createHttpError("Invalid URL format");
+    }
+  });
+
+  const fetchWithNetworkLimits = jest.fn(async (targetUrl: string) => {
+    if (targetUrl.includes("nonexistent-domain")) {
+      throw new Error("Failed to connect to the website");
+    }
+
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: new Headers({ "content-type": "text/html" }),
+      text: async () =>
+        "<html><head><title>Example</title><meta name=\"description\" content=\"desc\"></head><body></body></html>",
+      url: targetUrl,
+    } as any;
+  });
+
+  return {
+    ...actual,
+    validatePublicHttpsUrl,
+    fetchWithNetworkLimits,
   };
 });
 
@@ -20,14 +62,17 @@ describe("Usage Limits Integration", () => {
   let app: Express;
   let server: any;
   let mockStorage: MemStorage;
+  const authHeader = { Authorization: "Bearer test-token" };
 
   beforeEach(async () => {
     app = express();
     app.use(express.json());
-    
-    // Get the mocked storage instance
-    mockStorage = require("../storage").storage;
-    
+
+    // Reset the mocked storage instance for each test
+    const storageModule = require("../storage");
+    mockStorage = new storageModule.MemStorage();
+    storageModule.storage = mockStorage;
+
     server = await registerRoutes(app);
   });
 
@@ -39,6 +84,7 @@ describe("Usage Limits Integration", () => {
     it("should return quota status for tenant", async () => {
       const response = await request(app)
         .get("/api/quota")
+        .set(authHeader)
         .expect(200);
 
       expect(response.body).toMatchObject({
@@ -56,6 +102,7 @@ describe("Usage Limits Integration", () => {
     it("should return plan info with quota status", async () => {
       const response = await request(app)
         .get("/api/plan")
+        .set(authHeader)
         .expect(200);
 
       expect(response.body).toMatchObject({
@@ -82,6 +129,7 @@ describe("Usage Limits Integration", () => {
           url: "https://example.com",
           requestId: "test-request-1"
         })
+        .set(authHeader)
         .expect(200);
 
       expect(response.body).toMatchObject({
@@ -106,6 +154,7 @@ describe("Usage Limits Integration", () => {
       const response1 = await request(app)
         .post("/api/analyze")
         .send(requestData)
+        .set(authHeader)
         .expect(200);
 
       expect(response1.body.quota.quotaUsed).toBe(1);
@@ -114,6 +163,7 @@ describe("Usage Limits Integration", () => {
       const response2 = await request(app)
         .post("/api/analyze")
         .send(requestData)
+        .set(authHeader)
         .expect(200);
 
       expect(response2.body.quota.quotaUsed).toBe(1); // Should not increment
@@ -123,15 +173,16 @@ describe("Usage Limits Integration", () => {
       const limit = PLAN_CONFIGS.free.monthlyAuditLimit;
 
       // Fill up the quota
-      for (let i = 0; i < limit; i++) {
-        await request(app)
-          .post("/api/analyze")
-          .send({
-            url: "https://example.com",
-            requestId: `req-${i}`
-          })
-          .expect(200);
-      }
+        for (let i = 0; i < limit; i++) {
+          await request(app)
+            .post("/api/analyze")
+            .send({
+              url: "https://example.com",
+              requestId: `req-${i}`
+            })
+            .set(authHeader)
+            .expect(200);
+        }
 
       // Try one more request
       const response = await request(app)
@@ -140,6 +191,7 @@ describe("Usage Limits Integration", () => {
           url: "https://example.com",
           requestId: "overflow-request"
         })
+        .set(authHeader)
         .expect(429);
 
       expect(response.body).toMatchObject({
@@ -160,15 +212,16 @@ describe("Usage Limits Integration", () => {
       const ninetyPercent = Math.floor(limit * 0.9);
 
       // Fill to 80%
-      for (let i = 0; i < eightyPercent; i++) {
-        await request(app)
-          .post("/api/analyze")
-          .send({
-            url: "https://example.com",
-            requestId: `req-80-${i}`
-          })
-          .expect(200);
-      }
+        for (let i = 0; i < eightyPercent; i++) {
+          await request(app)
+            .post("/api/analyze")
+            .send({
+              url: "https://example.com",
+              requestId: `req-80-${i}`
+            })
+            .set(authHeader)
+            .expect(200);
+        }
 
       // Check 80% warning
       const response80 = await request(app)
@@ -177,21 +230,23 @@ describe("Usage Limits Integration", () => {
           url: "https://example.com",
           requestId: "check-80"
         })
+        .set(authHeader)
         .expect(200);
 
       expect(response80.body.quota.warningLevel).toBe("warning_80");
 
       // Fill to 90%
       const remaining = ninetyPercent - eightyPercent - 1; // -1 for the check-80 request
-      for (let i = 0; i < remaining; i++) {
-        await request(app)
-          .post("/api/analyze")
-          .send({
-            url: "https://example.com",
-            requestId: `req-90-${i}`
-          })
-          .expect(200);
-      }
+        for (let i = 0; i < remaining; i++) {
+          await request(app)
+            .post("/api/analyze")
+            .send({
+              url: "https://example.com",
+              requestId: `req-90-${i}`
+            })
+            .set(authHeader)
+            .expect(200);
+        }
 
       // Check 90% warning
       const response90 = await request(app)
@@ -200,6 +255,7 @@ describe("Usage Limits Integration", () => {
           url: "https://example.com",
           requestId: "check-90"
         })
+        .set(authHeader)
         .expect(200);
 
       expect(response90.body.quota.warningLevel).toBe("warning_90");
@@ -212,6 +268,7 @@ describe("Usage Limits Integration", () => {
           url: "not-a-valid-url",
           requestId: "invalid-url-test"
         })
+        .set(authHeader)
         .expect(400);
 
       expect(response.body.message).toContain("Invalid");
@@ -223,6 +280,7 @@ describe("Usage Limits Integration", () => {
         .send({
           url: "https://example.com"
         })
+        .set(authHeader)
         .expect(200);
 
       expect(response.body.quota.quotaUsed).toBe(1);
@@ -238,6 +296,7 @@ describe("Usage Limits Integration", () => {
           url: "https://nonexistent-domain-that-should-fail.invalid",
           requestId: "fail-test"
         })
+        .set(authHeader)
         .expect(400);
 
       expect(response.body.message).toContain("Failed to connect");
@@ -260,6 +319,7 @@ describe("Usage Limits Integration", () => {
           url: "https://example.com",
           requestId: "tenant1-req"
         })
+        .set(authHeader)
         .expect(200);
 
       // Check that tenant 1 has usage

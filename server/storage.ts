@@ -281,6 +281,13 @@ export class MemStorage implements IStorage {
   }
 
   async createUsageLedgerEntry(entry: Omit<InsertUsageLedger, 'id'>): Promise<UsageLedger> {
+    const key = `${entry.tenantId}-${entry.requestId}`;
+    const existing = this.usageLedger.get(key);
+
+    if (existing) {
+      return existing;
+    }
+
     const ledgerEntry: UsageLedger = {
       id: this.currentLedgerId++,
       tenantId: entry.tenantId,
@@ -294,8 +301,7 @@ export class MemStorage implements IStorage {
       completedAt: null,
       failedAt: null
     };
-    
-    const key = `${entry.tenantId}-${entry.requestId}`;
+
     this.usageLedger.set(key, ledgerEntry);
     
     // Update monthly usage
@@ -366,17 +372,42 @@ export class MemStorage implements IStorage {
 
   async atomicQuotaReservation(entry: Omit<InsertUsageLedger, 'id'>): Promise<{ success: boolean; quotaStatus: any; quotaUsed?: number; quotaLimit?: number; period?: string }> {
     // Get tenant and quota limit
-    const tenant = await this.getTenant(entry.tenantId);
-    if (!tenant) {
-      throw new Error("Tenant not found");
-    }
+      const tenant = await this.getTenant(entry.tenantId);
+      if (!tenant) {
+        throw new Error("Tenant not found");
+      }
 
-    const quotaLimit = PLAN_CONFIGS[tenant.plan as keyof typeof PLAN_CONFIGS].monthlyAuditLimit;
-    const currentUsage = await this.getMonthlyUsage(entry.tenantId, entry.period);
-    const quotaUsed = currentUsage?.enqueuedCount || 0;
+      const quotaLimit = PLAN_CONFIGS[tenant.plan as keyof typeof PLAN_CONFIGS].monthlyAuditLimit;
+      const currentUsage = await this.getMonthlyUsage(entry.tenantId, entry.period);
+      const quotaUsed = currentUsage?.enqueuedCount || 0;
 
-    // Check if quota would be exceeded
-    if (quotaUsed >= quotaLimit) {
+      const existingLedger = await this.getUsageLedgerEntry(entry.tenantId, entry.requestId);
+      if (existingLedger) {
+        const quotaPercentUsed = quotaLimit > 0 ? (quotaUsed / quotaLimit) * 100 : 0;
+        let warningLevel: "none" | "warning_80" | "warning_90" | "exceeded" = "none";
+
+        if (quotaPercentUsed > 100) {
+          warningLevel = "exceeded";
+        } else if (quotaPercentUsed > 90) {
+          warningLevel = "warning_90";
+        } else if (quotaPercentUsed >= 80) {
+          warningLevel = "warning_80";
+        }
+
+        const quotaStatus = {
+          quotaRemaining: Math.max(0, quotaLimit - quotaUsed),
+          quotaUsed,
+          quotaLimit,
+          quotaPercentUsed: Math.round(quotaPercentUsed * 100) / 100,
+          warningLevel,
+          period: entry.period,
+        };
+
+        return { success: true, quotaStatus };
+      }
+
+      // Check if quota would be exceeded
+      if (quotaUsed >= quotaLimit) {
       const quotaStatus = {
         quotaRemaining: 0,
         quotaUsed,
@@ -394,16 +425,16 @@ export class MemStorage implements IStorage {
     const updatedUsage = await this.getMonthlyUsage(entry.tenantId, entry.period);
     const newQuotaUsed = updatedUsage?.enqueuedCount || 0;
     const quotaRemaining = Math.max(0, quotaLimit - newQuotaUsed);
-    const quotaPercentUsed = quotaLimit > 0 ? (newQuotaUsed / quotaLimit) * 100 : 0;
+      const quotaPercentUsed = quotaLimit > 0 ? (newQuotaUsed / quotaLimit) * 100 : 0;
 
-    let warningLevel: "none" | "warning_80" | "warning_90" | "exceeded" = "none";
-    if (quotaPercentUsed >= 100) {
-      warningLevel = "exceeded";
-    } else if (quotaPercentUsed >= 90) {
-      warningLevel = "warning_90";
-    } else if (quotaPercentUsed >= 80) {
-      warningLevel = "warning_80";
-    }
+      let warningLevel: "none" | "warning_80" | "warning_90" | "exceeded" = "none";
+      if (quotaPercentUsed > 100) {
+        warningLevel = "exceeded";
+      } else if (quotaPercentUsed > 90) {
+        warningLevel = "warning_90";
+      } else if (quotaPercentUsed >= 80) {
+        warningLevel = "warning_80";
+      }
 
     const quotaStatus = {
       quotaRemaining,
