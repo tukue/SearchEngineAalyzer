@@ -1,7 +1,7 @@
 import { Code, Search, MessageSquare, AlertTriangle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MetaTag } from "@shared/schema";
+import { MetaTag } from "@/types/schema";
 
 type TagsTableProps = {
   tags: MetaTag[];

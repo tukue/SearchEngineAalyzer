@@ -1,9 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { storage, getDefaultTenantContext } from '../server/storage';
-import { urlSchema } from '../shared/schema';
+import { storage, getDefaultTenantContext } from '../../server/storage';
+import { urlSchema } from '../../shared/schema';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
-import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -15,9 +14,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  const { url } = req;
+  const path = (req.url || '').split('?')[0];
   
-  if (url === '/api/health' && req.method === 'GET') {
+  if (path === '/api/health' && req.method === 'GET') {
     return res.status(200).json({
       status: 'ok',
       message: 'Meta Tag Analyzer API is healthy',
@@ -26,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  if (url === '/api/analyze' && req.method === 'POST') {
+  if (path === '/api/analyze' && req.method === 'POST') {
     try {
       const { url: targetUrl } = urlSchema.parse(req.body);
       

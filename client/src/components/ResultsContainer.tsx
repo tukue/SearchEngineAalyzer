@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AnalysisResult } from "@shared/schema";
+import { AnalysisResult } from "@/types/schema";
 import TagsTable from "./TagsTable";
 import RecommendationsList from "./RecommendationsList";
 
