@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import * as cheerio from "cheerio";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { urlSchema, type AnalysisResult, type MetaTag } from "@shared/schema";
+import { urlSchema, type AnalysisResult, type MetaTag, type Recommendation } from "@shared/schema";
 import { storage } from "@server/storage";
 
 const importantSeoTags = ["title", "description", "keywords", "viewport", "canonical"];
@@ -247,11 +247,9 @@ export async function POST(req: NextRequest) {
       });
     });
 
-    const recommendations: Array<{
-      tagName: string;
-      description: string;
-      example: string;
-    }> = [];
+    type RecommendationDraft = Omit<Recommendation, "id" | "analysisId">;
+
+    const recommendations: RecommendationDraft[] = [];
 
     const tagExists = (tagName: string) =>
       foundMetaTags.some(
@@ -349,7 +347,7 @@ export async function POST(req: NextRequest) {
         timestamp: new Date().toISOString()
       },
       tags: normalizedMetaTags,
-      recommendations
+      recommendations: recommendations.map((rec) => ({ ...rec, id: 0, analysisId: 0 }))
     };
 
     const storedAnalysis = await storage.createAnalysis(analysisResult);

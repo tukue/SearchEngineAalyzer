@@ -3,11 +3,12 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["../client/src/*", "./*"],
+      "@/*": ["./*", "../client/src/*"],
       "@shared/*": ["./shared/*"],
       "@server/*": ["./server/*"]
     },
-    "types": ["node", "next", "next/image-types/global"],
+    "types": ["node", "next", "next/image-types/global", "react", "react-dom"],
+    "typeRoots": ["../node_modules/@types"],
     "allowJs": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
