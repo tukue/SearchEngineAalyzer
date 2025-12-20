@@ -33,3 +33,20 @@ For automated tests, `TEST_API_TOKEN` can be set; otherwise a `test-token` defau
    ```bash
    git clone https://github.com/tukue/SearchEngineAalyzer.git
    cd SearchEngineAalyzer
+
+### Installing dependencies
+
+Run dependencies installation with scripts disabled for faster CI:
+
+```bash
+npm ci --ignore-scripts
+```
+
+If the registry responds with **403 Forbidden** (common in restricted environments), set an auth token and retry:
+
+```bash
+export NPM_TOKEN="<npm-registry-token>"
+npm ci --ignore-scripts --registry=https://registry.npmjs.org
+```
+
+The repository includes a `.npmrc` that uses `NPM_TOKEN` automatically so CI systems can inject credentials without modifying commands.
