@@ -2,7 +2,7 @@ import * as cheerio from "cheerio";
 import { AnalysisResult } from "@shared/schema";
 import { createHttpError, fetchWithNetworkLimits, validatePublicHttpsUrl } from "../url-safety";
 
-export async function analyzeUrl(normalizedUrl: string, options?: { tenantId?: string; userId?: string; auditType?: string }): Promise<AnalysisResult> {
+export async function analyzeUrl(normalizedUrl: string, options?: { tenantId?: number; userId?: string; auditType?: string }): Promise<AnalysisResult> {
   if (!normalizedUrl || typeof normalizedUrl !== "string") {
     throw createHttpError("Invalid URL parameter");
   }
@@ -266,11 +266,13 @@ export async function analyzeUrl(normalizedUrl: string, options?: { tenantId?: s
   const healthScore = Math.round((presentImportantTags / totalImportantTags) * 100);
   const totalTags = foundMetaTags.length;
 
+  const tenantId = options?.tenantId ?? (() => {
+    throw new Error("tenantId is required for analysis");
+  })();
+
   const analysis = {
     id: 0,
-    tenantId: options?.tenantId ?? "",
-    userId: options?.userId ?? "",
-    auditType: options?.auditType ?? "meta",
+    tenantId,
     url: normalizedUrl,
     totalCount: totalTags,
     seoCount,
