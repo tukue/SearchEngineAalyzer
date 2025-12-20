@@ -266,9 +266,13 @@ export async function analyzeUrl(normalizedUrl: string, options?: { tenantId?: n
   const healthScore = Math.round((presentImportantTags / totalImportantTags) * 100);
   const totalTags = foundMetaTags.length;
 
+  const tenantId = options?.tenantId ?? (() => {
+    throw new Error("tenantId is required for analysis");
+  })();
+
   const analysis = {
     id: 0,
-    tenantId: options?.tenantId ?? 1,
+    tenantId,
     url: normalizedUrl,
     totalCount: totalTags,
     seoCount,
