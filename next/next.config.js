@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 const path = require("path");
 
 /** @type {import('next').NextConfig} */
@@ -11,13 +10,7 @@ const nextConfig = {
       "@server": path.resolve(__dirname, "../server")
     };
     return config;
-  }
-};
-
-module.exports = nextConfig;
-=======
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+  },
   async rewrites() {
     return [
       {
@@ -26,7 +19,6 @@ const nextConfig = {
       },
     ]
   },
-}
+};
 
-module.exports = nextConfig
->>>>>>> origin/main
+module.exports = nextConfig;

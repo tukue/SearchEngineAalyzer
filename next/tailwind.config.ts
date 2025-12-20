@@ -1,13 +1,4 @@
-<<<<<<< HEAD
 import type { Config } from "tailwindcss";
-
-export default {
-  darkMode: ["class"],
-  content: [
-    "./app/**/*.{ts,tsx}",
-    "../client/src/**/*.{js,jsx,ts,tsx}",
-=======
-import type { Config } from "tailwindcss"
 
 const config: Config = {
   darkMode: ["class"],
@@ -16,7 +7,7 @@ const config: Config = {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./hooks/**/*.{js,ts,jsx,tsx,mdx}",
     "./lib/**/*.{js,ts,jsx,tsx,mdx}",
->>>>>>> origin/main
+    "../client/src/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
     extend: {
@@ -101,15 +92,7 @@ const config: Config = {
       },
     },
   },
-<<<<<<< HEAD
-  plugins: [
-    require("tailwindcss-animate"),
-    require("@tailwindcss/typography"),
-  ],
-} satisfies Config;
-=======
   plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
-}
+};
 
-export default config
->>>>>>> origin/main
+export default config;
