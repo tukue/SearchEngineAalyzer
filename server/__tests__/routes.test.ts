@@ -2,7 +2,6 @@ import express from 'express';
 import { registerRoutes } from '../routes';
 import supertest from 'supertest';
 import { Server } from 'http';
-import { storage } from '../storage';
 
 // Mock the fetch function
 jest.mock('node-fetch', () => {
@@ -35,7 +34,16 @@ describe('API Routes', () => {
   let server: Server;
   let request: any; // Use any to avoid type issues with supertest
 
+  const testToken = process.env.TEST_API_TOKEN || 'test-token';
+  const withTenant = (req: any, tenantId = '1', userId = 'user-1', role = 'owner') =>
+    req
+      .set('authorization', `Bearer ${testToken}`)
+      .set('x-tenant-id', tenantId)
+      .set('x-user-id', userId)
+      .set('x-tenant-role', role);
+
   beforeAll(async () => {
+    process.env.API_AUTH_TOKEN = testToken;
     app = express();
     app.use(express.json());
     server = await registerRoutes(app);
@@ -43,7 +51,7 @@ describe('API Routes', () => {
   });
 
   afterAll((done) => {
-    if (server) {
+    if (server && server.listening) {
       server.close(done);
     } else {
       done();
@@ -52,24 +60,20 @@ describe('API Routes', () => {
 
   describe('POST /api/analyze', () => {
     it('should return 400 for invalid URL', async () => {
-      const response = await request
-        .post('/api/analyze')
-        .send({ url: '' });
+      const response = await withTenant(request.post('/api/analyze')).send({ url: '', requestId: 'invalid-url' });
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('message');
     });
 
     it('should analyze a valid URL and return results', async () => {
-      const response = await request
-        .post('/api/analyze')
-        .send({ url: 'https://example.com' });
+      const response = await withTenant(request.post('/api/analyze')).send({ url: 'https://example.com', requestId: 'valid-url' });
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('analysis');
       expect(response.body).toHaveProperty('tags');
       expect(response.body).toHaveProperty('recommendations');
-      
+
       // Check analysis structure
       expect(response.body.analysis).toHaveProperty('id');
       expect(response.body.analysis).toHaveProperty('url');
@@ -79,14 +83,79 @@ describe('API Routes', () => {
       expect(response.body.analysis).toHaveProperty('technicalCount');
       expect(response.body.analysis).toHaveProperty('missingCount');
       expect(response.body.analysis).toHaveProperty('healthScore');
-      
+
       // Verify some meta tags were found
       expect(response.body.tags.length).toBeGreaterThan(0);
-      
+
       // A tag with the name "title" should exist
       const titleTag = response.body.tags.find((tag: any) => tag.name === 'title');
       expect(titleTag).toBeDefined();
       expect(titleTag.content).toBe('Test Website');
+    });
+
+    it('should reject requests without tenant context', async () => {
+      const response = await request.post('/api/analyze').send({ url: 'https://example.com' });
+      expect(response.status).toBe(401);
+    });
+
+    it('should block non-HTTPS targets', async () => {
+      const response = await withTenant(request.post('/api/analyze')).send({ url: 'http://example.com', requestId: 'non-https' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/https/i);
+    });
+
+    it('should block localhost targets', async () => {
+      const response = await withTenant(request.post('/api/analyze')).send({ url: 'https://localhost', requestId: 'localhost' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/not allowed/i);
+    });
+
+    it('should block private IP addresses', async () => {
+      const privateIps = ['https://10.0.0.1', 'https://172.16.0.1', 'https://192.168.1.10'];
+
+      for (const ip of privateIps) {
+        const response = await withTenant(request.post('/api/analyze')).send({ url: ip, requestId: 'private-ip' });
+        expect(response.status).toBe(400);
+        expect(response.body.message).toMatch(/not allowed|disallowed/i);
+      }
+    });
+
+    it('should block IPv6 private and mapped private addresses', async () => {
+      const privateIps = ['https://[fd00::1]', 'https://[::ffff:10.0.0.5]'];
+
+      for (const ip of privateIps) {
+        const response = await withTenant(request.post('/api/analyze')).send({ url: ip, requestId: 'ipv6-private' });
+        expect(response.status).toBe(400);
+        expect(response.body.message).toMatch(/not allowed|disallowed|resolve/i);
+      }
+    });
+
+    it('should block read-only users from creating analyses', async () => {
+      const response = await withTenant(request.post('/api/analyze'), '1', 'user-2', 'read-only').send({
+        url: 'https://example.com',
+        requestId: 'readonly-user',
+      });
+
+      expect(response.status).toBe(403);
+      expect(response.body.message).toMatch(/role/i);
+    });
+  });
+
+  describe('GET /api/analyses/:id', () => {
+    it('should reject tenant mismatch access attempts', async () => {
+      const created = await withTenant(request.post('/api/analyze'), '1', 'user-a', 'owner').send({
+        url: 'https://example.com',
+        requestId: 'tenant-a-analysis',
+      });
+      expect(created.status).toBe(200);
+
+      const analysisId = created.body.analysis.id;
+
+      const response = await withTenant(request.get(`/api/analyses/${analysisId}`), '2', 'user-b', 'owner');
+
+      expect(response.status).toBe(404);
     });
   });
 });

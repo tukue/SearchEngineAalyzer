@@ -1,6 +1,6 @@
 import http from 'http';
 import request from 'supertest';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { IncomingMessage, ServerResponse } from 'http';
 import handler from '../../api/index';
 import fetch from 'node-fetch';
 
@@ -9,20 +9,28 @@ jest.mock('node-fetch', () => ({ __esModule: true, default: jest.fn() }));
 const fetchMock = fetch as jest.MockedFunction<typeof fetch>;
 
 describe('Vercel deployment API integration', () => {
+  let server: http.Server;
+
   beforeEach(() => {
     fetchMock.mockReset();
+    server = createServer();
+  });
+
+  afterEach(() => {
+    server.close();
   });
 
   const createServer = () =>
     http.createServer((req, res) => {
-      const vercelReq = Object.assign(req, { query: {}, body: undefined }) as VercelRequest;
-      const vercelRes = res as VercelResponse;
+      const vercelReq = Object.assign(req, { query: {}, body: undefined }) as IncomingMessage & {
+        query: Record<string, string>;
+        body: unknown;
+      };
+      const vercelRes = res as ServerResponse;
       return handler(vercelReq, vercelRes);
     });
 
   it('serves JSON for the health route instead of raw source', async () => {
-    const server = createServer();
-
     const res = await request(server).get('/api/health');
 
     expect(res.status).toBe(200);
@@ -70,8 +78,6 @@ describe('Vercel deployment API integration', () => {
       headers: new Headers({ 'content-type': 'text/html' }),
       url: 'https://example.com'
     } as any);
-
-    const server = createServer();
 
     const res = await request(server)
       .post('/api/analyze')

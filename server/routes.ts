@@ -1,16 +1,36 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { requireEntitlement, PlanGatingService } from "./plan-gating";
+import { checkAndReserveQuota, addQuotaToResponse, UsageLimitsService } from "./usage-limits";
 import express from "express";
-import { urlSchema } from "@shared/schema";
+import { urlSchema, AuditRequest, PLAN_CONFIGS, TenantContext } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
-import fetch from "node-fetch";
+import { fetchWithNetworkLimits, validatePublicHttpsUrl, createHttpError } from "./url-safety";
 import * as cheerio from "cheerio";
+import { requireAuthContext } from "./context";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   const apiRouter = express.Router();
+  
+  // Middleware to add tenant context (simplified for MVP - uses default tenant)
+  apiRouter.use(async (req, res, next) => {
+    try {
+      // In production, extract tenant from JWT token or request headers
+      req.tenantContext = await getDefaultTenantContext();
+      next();
+    } catch (error) {
+      console.error('Failed to load tenant context:', error);
+      // Differentiate between authentication and system errors
+      if (error instanceof Error && error.message.includes('not found')) {
+        res.status(401).json({ message: "Authentication required" });
+      } else {
+        res.status(500).json({ message: "System error occurred" });
+      }
+    }
+  });
 
   // Health check endpoint for CI/CD
   apiRouter.get("/health", (req, res) => {
@@ -22,37 +42,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Analyze URL endpoint
-  apiRouter.post("/analyze", async (req, res) => {
+  apiRouter.use(requireAuthContext);
+
+  // Get current plan and entitlements with quota status
+  apiRouter.get("/plan", async (req, res) => {
     try {
-      // Validate URL
-      const { url } = urlSchema.parse(req.body);
+      const tenantContext = req.tenantContext as TenantContext;
+      const planConfig = PLAN_CONFIGS[tenantContext.plan];
+      const quotaStatus = await UsageLimitsService.getQuotaStatus(tenantContext.tenantId);
       
-      let normalizedUrl = url;
-      if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
-        normalizedUrl = "https://" + normalizedUrl;
+      res.json({
+        currentPlan: tenantContext.plan,
+        entitlements: planConfig,
+        tenantId: tenantContext.tenantId,
+        quota: quotaStatus
+      });
+    } catch (error) {
+      console.error("Error fetching plan info:", error);
+      res.status(500).json({ message: "Failed to fetch plan information" });
+    }
+  });
+  
+  // Get current quota status
+  apiRouter.get("/quota", async (req, res) => {
+    try {
+      const tenantContext = req.tenantContext as TenantContext;
+      const quotaStatus = await UsageLimitsService.getQuotaStatus(tenantContext.tenantId);
+      
+      res.json(quotaStatus);
+    } catch (error) {
+      console.error("Error fetching quota status:", error);
+      res.status(500).json({ message: "Failed to fetch quota status" });
+    }
+  });
+  
+  // Get analysis history with plan-based depth limiting
+  apiRouter.get("/history", async (req, res) => {
+    try {
+      const tenantContext = req.tenantContext as TenantContext;
+      const historyDepth = PlanGatingService.getQuotaLimit(tenantContext, 'historyDepth');
+      
+      const history = await storage.getAnalysisHistory(tenantContext.tenantId, historyDepth);
+      
+      res.json({
+        analyses: history,
+        limit: historyDepth,
+        currentPlan: tenantContext.plan
+      });
+    } catch (error) {
+      console.error("Error fetching history:", error);
+      res.status(500).json({ message: "Failed to fetch analysis history" });
+    }
+  });
+  
+  // Export analysis (gated feature)
+  apiRouter.post("/export/:id", requireEntitlement('exportsEnabled'), async (req, res) => {
+    try {
+      const tenantContext = req.tenantContext as TenantContext;
+      const analysisId = parseInt(req.params.id);
+      const format = req.body.format || 'json'; // json, pdf, html
+      
+      const analysis = await storage.getAnalysis(tenantContext.tenantId, analysisId);
+      if (!analysis) {
+        return res.status(404).json({ message: "Analysis not found" });
       }
       
-      // Fetch the website content
+      // Increment export usage
+      await storage.incrementUsage(tenantContext.tenantId, 'export');
+      
+      // For MVP, just return the analysis data
+      // In production, this would generate PDF/HTML exports
+      res.json({
+        message: "Export generated successfully",
+        format,
+        data: analysis
+      });
+    } catch (error) {
+      console.error("Error exporting analysis:", error);
+      res.status(500).json({ message: "Failed to export analysis" });
+    }
+  });
+  
+  // Analyze URL endpoint with quota checking and reservation
+  apiRouter.post("/analyze", checkAndReserveQuota(), addQuotaToResponse(), async (req, res) => {
+    const tenantContext = req.tenantContext!;
+    const requestId = req.auditRequestId!;
+    
+    try {
+      // Validate request
+      const auditRequest = AuditRequest.parse({
+        ...req.body,
+        userId: req.tenantContext?.userId,
+      });
+      const { url } = auditRequest;
+
+      if (tenantContext.role === "read-only") {
+        throw createHttpError("Insufficient role for this action", 403);
+      }
+
+      const parsedUrl = await validatePublicHttpsUrl(url, `tenant=${tenantContext.tenantId}`);
+      const normalizedUrl = parsedUrl.toString();
+
       let response;
       try {
-        response = await fetch(normalizedUrl, {
+        response = await fetchWithNetworkLimits(normalizedUrl, {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; MetaTagAnalyzer/1.0)'
-          }
+            "User-Agent": "Mozilla/5.0 (compatible; MetaTagAnalyzer/1.0)",
+          },
         });
-        
-        if (!response.ok) {
-          return res.status(400).json({ 
-            message: `Failed to fetch website: ${response.status} ${response.statusText}` 
-          });
-        }
       } catch (error) {
-        return res.status(400).json({ 
-          message: `Failed to connect to the website: ${error instanceof Error ? error.message : String(error)}` 
-        });
+        throw createHttpError(
+          `Failed to connect to the website: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
-      
+
+      if (!response.ok) {
+        throw createHttpError(`Failed to fetch website: ${response.status} ${response.statusText}`);
+      }
+
       const html = await response.text();
       
       // Parse meta tags
@@ -322,14 +429,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       // Store the results
-      const storedAnalysis = await storage.createAnalysis(analysisResult);
+      const storedAnalysis = await storage.createAnalysis(tenantContext.tenantId, analysisResult);
+      
+      // Mark audit as completed
+      await UsageLimitsService.completeAudit(tenantContext.tenantId, requestId);
+      
+      // Increment legacy usage tracking
+      await storage.incrementUsage(tenantContext.tenantId, 'audit');
       
       res.json(storedAnalysis);
     } catch (error) {
+      // Mark audit as failed
+      try {
+        await UsageLimitsService.failAudit(tenantContext.tenantId, requestId);
+      } catch (failError) {
+        console.error("Error marking audit as failed:", failError);
+      }
+      
       if (error instanceof z.ZodError) {
         const validationError = fromZodError(error);
-        return res.status(400).json({ message: validationError.message || "Invalid URL format" });
+        return res.status(400).json({ message: validationError.message || "Invalid request format" });
       }
+
+      if ((error as any).status) {
+        return res.status((error as any).status).json({ message: (error as Error).message });
+      }
+
       console.error("Error analyzing website:", error);
       res.status(500).json({ message: "Failed to analyze website" });
     }

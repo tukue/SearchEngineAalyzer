@@ -6,3 +6,4 @@ coverage
 next/.next
 vite.config.ts.*
 *.tar.gz
+.next

@@ -7,6 +7,16 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+const defaultTenantHeaders: Record<string, string> = {
+  get Authorization() {
+    const token = import.meta.env.VITE_API_TOKEN;
+    if (!token) {
+      throw new Error("VITE_API_TOKEN environment variable is required");
+    }
+    return `Bearer ${token}`;
+  },
+};
+
 export async function apiRequest(
   method: string,
   url: string,
@@ -14,7 +24,10 @@ export async function apiRequest(
 ): Promise<Response> {
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: {
+      ...defaultTenantHeaders,
+      ...(data ? { "Content-Type": "application/json" } : {}),
+    },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -30,6 +43,7 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const res = await fetch(queryKey[0] as string, {
+      headers: defaultTenantHeaders,
       credentials: "include",
     });
 
