@@ -43,9 +43,7 @@ export interface IStorage {
   // Usage tracking (legacy)
   incrementUsage(tenantId: number, type: 'audit' | 'export'): Promise<void>;
   getCurrentUsage(tenantId: number, month: string): Promise<UsageTracking | undefined>;
-<<<<<<< HEAD
-=======
-  
+
   // Usage ledger (new)
   createUsageLedgerEntry(entry: Omit<InsertUsageLedger, 'id'>): Promise<UsageLedger>;
   getUsageLedgerEntry(tenantId: number, requestId: string): Promise<UsageLedger | undefined>;
@@ -57,7 +55,6 @@ export interface IStorage {
   atomicQuotaReservation(entry: Omit<InsertUsageLedger, 'id'>): Promise<{ success: boolean; quotaStatus: any; quotaUsed?: number; quotaLimit?: number; period?: string }>;
   releaseQuotaReservation(tenantId: number, requestId: string): Promise<void>;
   cleanupExpiredQuotaReservations(tenantId: number, olderThanHours: number): Promise<number>;
->>>>>>> origin/main
 }
 
 // Memory storage implementation
@@ -281,8 +278,6 @@ export class MemStorage implements IStorage {
   async getCurrentUsage(tenantId: number, month: string): Promise<UsageTracking | undefined> {
     const key = `${tenantId}-${month}`;
     return this.usageTracking.get(key);
-<<<<<<< HEAD
-=======
   }
 
   async createUsageLedgerEntry(entry: Omit<InsertUsageLedger, 'id'>): Promise<UsageLedger> {
@@ -455,14 +450,13 @@ export class MemStorage implements IStorage {
       if (entry) {
         this.usageLedger.delete(key);
         // Update monthly usage for each cleaned entry
-        this.updateMonthlyUsage(tenantId, entry.period).catch(err => 
+        this.updateMonthlyUsage(tenantId, entry.period).catch(err =>
           console.error('Failed to update monthly usage during cleanup:', err)
         );
       }
     });
-    
+
     return cleanedCount;
->>>>>>> origin/main
   }
 }
 
