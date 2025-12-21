@@ -7,3 +7,4 @@ next/.next
 vite.config.ts.*
 *.tar.gz
 .next
+.vscode/
