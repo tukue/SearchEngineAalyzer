@@ -3,7 +3,7 @@ const config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
+    '^@/(.*)$': ['<rootDir>/next/$1', '<rootDir>/client/src/$1'],
     '^@shared/(.*)$': '<rootDir>/shared/$1',
     '^@server/(.*)$': '<rootDir>/server/$1',
     '^@client/(.*)$': '<rootDir>/client/$1',

@@ -5,6 +5,7 @@
     "module": "CommonJS",
     "moduleResolution": "Node",
     "isolatedModules": true,
+    "jsx": "react-jsx",
     "types": ["jest", "node"]
   },
   "include": ["./**/*.ts", "./**/*.tsx"],
