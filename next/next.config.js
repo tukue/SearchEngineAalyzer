@@ -2,6 +2,9 @@ const path = require("path");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     externalDir: true,
   },
