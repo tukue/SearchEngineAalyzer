@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node ../node_modules/next/dist/bin/next dev",
-    "build": "node ../node_modules/next/dist/bin/next build",
-    "start": "node ../node_modules/next/dist/bin/next start",
+    "dev": "node ./scripts/next-cli.cjs dev",
+    "build": "node ./scripts/next-cli.cjs build",
+    "start": "node ./scripts/next-cli.cjs start",
     "lint": "echo \"Skipping lint: ESLint is not available in this environment\""
   },
   "dependencies": {
