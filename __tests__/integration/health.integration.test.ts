@@ -5,7 +5,11 @@ import packageJson from '../../package.json';
 const createRequest = (path = '/api/health') => new NextRequest(`http://localhost${path}`);
 
 describe('Next.js health route', () => {
-  const originalEnv = process.env.NEXT_MIGRATED_API_ENDPOINTS;
+  let originalEnv: string | undefined;
+
+  beforeEach(() => {
+    originalEnv = process.env.NEXT_MIGRATED_API_ENDPOINTS;
+  });
 
   afterEach(() => {
     if (originalEnv === undefined) {
