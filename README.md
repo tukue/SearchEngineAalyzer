@@ -23,6 +23,7 @@ Authentication is required for write APIs. Set the following variables when runn
 
 - **API_AUTH_TOKEN** (server): required bearer token value accepted by the API. Example: `API_AUTH_TOKEN=dev-token-123`.
 - **VITE_API_TOKEN** (client): token the frontend sends in the `Authorization` header. This must match `API_AUTH_TOKEN` (or an entry in `API_AUTH_TOKENS` if using multiple tokens).
+- **API_BASE_URL** (Next.js): base URL for rewrites to the API; defaults to `http://localhost:5000` and only needs to be set when proxying to a hosted backend.
 
 For automated tests, `TEST_API_TOKEN` can be set; otherwise a `test-token` default is used while `NODE_ENV=test`.
 
