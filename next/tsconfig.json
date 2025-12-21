@@ -27,6 +27,6 @@
     "components/**/*",
     "shared/**/*",
     "server/**/*",
-    "../client/src/**/*"
+    "../client/src/**/*",
   ]
 }
