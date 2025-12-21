@@ -1,24 +1,25 @@
-import type { Metadata } from "next"
-import type { ReactNode } from "react"
-import "./globals.css"
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { Providers } from "./providers";
+import "./globals.css";
 
-import { Providers } from "./providers"
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Search Engine Analyzer (Next.js)",
-  description: "Experimental Next.js app shell for the Search Engine Analyzer UI.",
-}
+  title: "Meta Tag Analyzer",
+  description: "Analyze and validate meta tags from any website in real-time.",
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en">
-      <body>
+      <body className={inter.className}>
         <Providers>{children}</Providers>
       </body>
     </html>
-  )
+  );
 }
