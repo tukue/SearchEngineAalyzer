@@ -21,8 +21,11 @@ Go to: `Settings > Secrets and variables > Actions`
 
 Add:
 - `VERCEL_TOKEN` - Your Vercel token
-- `VERCEL_ORG_ID` - Your organization ID  
+- `VERCEL_ORG_ID` - Your organization ID
 - `VERCEL_PROJECT_ID` - Your project ID
+
+## Environment variables
+- `API_BASE_URL` - API origin used by Next.js rewrites; set under `Project Settings > Environment Variables` in the Vercel dashboard (or via `.vercel/env.*`).
 
 ## Manual Deployment
 ```bash
