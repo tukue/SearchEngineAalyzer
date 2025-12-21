@@ -10,6 +10,7 @@ import { fromZodError } from "zod-validation-error";
 import { fetchWithNetworkLimits, validatePublicHttpsUrl, createHttpError } from "./url-safety";
 import * as cheerio from "cheerio";
 import { requireAuthContext } from "./context";
+import { buildHealthResponse } from "../shared/health";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
@@ -34,12 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Health check endpoint for CI/CD
   apiRouter.get("/health", (req, res) => {
-    res.status(200).json({
-      status: "ok",
-      message: "Meta Tag Analyzer API is healthy",
-      timestamp: new Date().toISOString(),
-      version: "1.0.0"
-    });
+    res.status(200).json(buildHealthResponse());
   });
 
   apiRouter.use(requireAuthContext);

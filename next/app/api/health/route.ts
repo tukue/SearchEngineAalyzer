@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import packageJson from "../../../../package.json";
+import { buildHealthResponse } from "../../../../shared/health";
 
 const HEALTH_ENDPOINT_NAME = "health";
 
@@ -25,10 +25,5 @@ export function GET(_req: NextRequest) {
     );
   }
 
-  return NextResponse.json({
-    status: "ok",
-    message: "Meta Tag Analyzer API is healthy",
-    timestamp: new Date().toISOString(),
-    version: packageJson.version
-  });
+  return NextResponse.json(buildHealthResponse());
 }
