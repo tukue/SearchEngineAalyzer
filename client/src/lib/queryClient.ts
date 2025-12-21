@@ -7,13 +7,31 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+function resolveApiToken(): string {
+  const fromProcess =
+    typeof process !== "undefined"
+      ? process.env.NEXT_PUBLIC_API_TOKEN ?? process.env.VITE_API_TOKEN
+      : undefined;
+
+  if (fromProcess) {
+    return fromProcess;
+  }
+
+  const fromImportMeta =
+    typeof import.meta !== "undefined"
+      ? (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_API_TOKEN
+      : undefined;
+
+  if (fromImportMeta) {
+    return fromImportMeta;
+  }
+
+  throw new Error("NEXT_PUBLIC_API_TOKEN (or VITE_API_TOKEN) environment variable is required");
+}
+
 const defaultTenantHeaders: Record<string, string> = {
   get Authorization() {
-    const token = import.meta.env.VITE_API_TOKEN;
-    if (!token) {
-      throw new Error("VITE_API_TOKEN environment variable is required");
-    }
-    return `Bearer ${token}`;
+    return `Bearer ${resolveApiToken()}`;
   },
 };
 
