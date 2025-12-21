@@ -7,6 +7,14 @@
 - **Effort-saving guidance:** Minimal, high-ROI fixes surfaced first to reduce decision fatigue.
 - **Trustworthiness at a glance:** Signals that reassure users on safety, legitimacy, and policy clarity.
 
+## Competitor Gaps and Differentiation (vs. Lighthouse/SEO suites/QA tools)
+- **Change awareness vs. absolute scores:** Deploy Delta Radar focuses on deltas (rarely covered in Lighthouse) to cut alert fatigue and enable ship/no-ship clarity.
+- **Flow-level revenue risk vs. page-only checks:** Revenue Journey Stress Test exercises multi-step journeys under variance—beyond single-page perf/SEO scanners.
+- **Trust perception vs. technical hygiene:** Perception of Trust Scan surfaces brand/policy discoverability and mixed-content trust breakers that generic SEO/perf tools skip.
+- **Dependency attribution vs. opaque waterfalls:** Delivery Dependency Sentinel isolates third-party/CDN risk instead of lumping everything into TTFB/TTI.
+- **Cross-page consistency vs. page-by-page scoring:** Fragmentation Risk Audit detects template drift ignored by page-centric tools.
+- **Content recency and coherence vs. keyword presence:** Content Freshness & Drift Monitor catches stale/contradictory messaging that traditional SEO keyword audits miss.
+
 ## Prioritized Audit Approaches (Start from the Top)
 1. **Deploy Delta Radar** — Detect only regressions since last deploy across key flows; enables immediate ship/no-ship confidence. *Effort to integrate:* low (store prior run + diff). *Priority:* MVP core.
 2. **Revenue Journey Stress Test** — Exercise money paths under real-world conditions; protects conversion-critical steps. *Effort to integrate:* low-medium (2–3 Playwright scripts + network profiles). *Priority:* MVP core.
