@@ -34,5 +34,5 @@
   },
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist/public",
-  "installCommand": "npm install"
+  "installCommand": "npm_config_proxy=false npm_config_https_proxy=false npm ci"
 }

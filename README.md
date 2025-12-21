@@ -49,4 +49,10 @@ export NPM_TOKEN="<npm-registry-token>"
 npm ci --ignore-scripts --registry=https://registry.npmjs.org
 ```
 
-The repository includes a `.npmrc` that uses `NPM_TOKEN` automatically so CI systems can inject credentials without modifying commands.
+The repository includes a `.npmrc` that uses `NPM_TOKEN` automatically for private packages while keeping `always-auth` disabled so public installs stay proxy-free. For a lockfile-faithful, proxy-free install, use:
+
+```bash
+npm run install:clean
+```
+
+The same proxy-free `npm ci` command is used by Vercel so deployments do not depend on environment-provided proxies.

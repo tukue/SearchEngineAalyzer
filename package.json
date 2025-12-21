@@ -7,6 +7,7 @@
     "dev": "tsx server/index.ts",
     "build": "npx vite build && npx esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "vercel-build": "npx vite build",
+    "install:clean": "npm_config_proxy=false npm_config_https_proxy=false npm ci",
     "vercel-dev": "vercel dev",
     "start": "node dist/index.js",
     "next:dev": "next dev next",
