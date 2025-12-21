@@ -1,12 +1,25 @@
 #!/usr/bin/env node
+const path = require('path');
+
 function resolveNextBin() {
-  try {
-    return require.resolve('next/dist/bin/next', { paths: [process.cwd()] });
-  } catch (error) {
-    console.error('Unable to locate Next.js binary from current workspace.');
-    console.error('Searched from:', process.cwd());
-    throw error;
+  const searchRoots = [
+    process.cwd(),
+    path.resolve(__dirname, '..'),
+    path.resolve(__dirname, '..', '..'),
+  ];
+
+  let lastError;
+  for (const root of searchRoots) {
+    try {
+      return require.resolve('next/dist/bin/next', { paths: [root] });
+    } catch (error) {
+      lastError = error;
+    }
   }
+
+  console.error('Unable to locate Next.js binary.');
+  console.error('Searched from:', searchRoots.join(', '));
+  throw lastError;
 }
 
 const nextBin = resolveNextBin();

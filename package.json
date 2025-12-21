@@ -2,6 +2,9 @@
   "name": "next-web-audit",
   "version": "2.0.0",
   "type": "module",
+  "engines": {
+    "node": "20.x"
+  },
   "license": "MIT",
   "scripts": {
     "dev": "tsx server/index.ts",
