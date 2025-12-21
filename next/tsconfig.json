@@ -3,7 +3,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*", "../client/src/*"],
+      "@/*": ["../client/src/*", "./*"],
       "@shared/*": ["./shared/*"],
       "@server/*": ["./server/*"]
     },
@@ -18,14 +18,15 @@
       }
     ]
   },
-    "include": [
-      "next-env.d.ts",
-      "app/**/*",
-      ".next/types/**/*.ts",
-      "lib/**/*",
-      "hooks/**/*",
-      "components/**/*",
-      "shared/**/*",
-      "server/**/*"
-    ]
-  }
+  "include": [
+    "next-env.d.ts",
+    "app/**/*",
+    ".next/types/**/*.ts",
+    "lib/**/*",
+    "hooks/**/*",
+    "components/**/*",
+    "shared/**/*",
+    "server/**/*",
+    "../client/src/**/*"
+  ]
+}
