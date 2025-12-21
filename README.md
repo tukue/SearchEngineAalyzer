@@ -33,6 +33,7 @@ For automated tests, `TEST_API_TOKEN` can be set; otherwise a `test-token` defau
    ```bash
    git clone https://github.com/tukue/SearchEngineAalyzer.git
    cd SearchEngineAalyzer
+   ```
 
 ### Installing dependencies
 
