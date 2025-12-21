@@ -81,13 +81,20 @@ for (const token of loadConfiguredTokens()) {
   tokenLookup.set(token.token, token);
 }
 
-function extractToken(req: Request): string | null {
-  const authHeader = req.header("authorization");
+export type HeaderSource = {
+  header?: (name: string) => string | undefined;
+  get?: (name: string) => string | null | undefined;
+};
+
+export function extractToken(headerSource: HeaderSource): string | null {
+  const getHeader = (name: string) => headerSource.header?.(name) ?? headerSource.get?.(name);
+
+  const authHeader = getHeader("authorization");
   if (authHeader?.toLowerCase().startsWith("bearer ")) {
     return authHeader.slice(7).trim();
   }
 
-  const apiToken = req.header("x-api-token");
+  const apiToken = getHeader("x-api-token");
   return apiToken ? apiToken.trim() : null;
 }
 
@@ -106,7 +113,7 @@ function applyRoleOverride(baseRole: TenantRole, requestedRole?: string | null):
   return requestedRank <= baseRank ? normalized : baseRole;
 }
 
-async function resolveTenantContext(token: string, requestedRole?: string | null): Promise<AuthenticatedTenantContext | null> {
+export async function resolveTenantContext(token: string, requestedRole?: string | null): Promise<AuthenticatedTenantContext | null> {
   const config = tokenLookup.get(token);
   if (!config) return null;
 
@@ -123,6 +130,13 @@ async function resolveTenantContext(token: string, requestedRole?: string | null
     role: applyRoleOverride(config.role || "member", requestedRole),
     tokenLabel: config.label,
   };
+}
+
+export async function resolveTenantContextFromHeaders(headerSource: HeaderSource, requestedRole?: string | null) {
+  const token = extractToken(headerSource);
+  if (!token) return null;
+
+  return resolveTenantContext(token, requestedRole);
 }
 
 export async function requireAuthContext(req: Request, res: Response, next: NextFunction) {
