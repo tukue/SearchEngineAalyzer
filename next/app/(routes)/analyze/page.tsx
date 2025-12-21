@@ -23,8 +23,16 @@ export default function AnalyzePage() {
     reset,
   } = useMutation({
     mutationFn: async (url: string) => {
-      const res = await apiRequest("POST", "/api/analyze", { url });
-      return res.json() as Promise<AnalysisResult>;
+      try {
+        const res = await apiRequest("POST", "/api/analyze", { url });
+        if (!res.ok) {
+          throw new Error(`API request failed with status ${res.status}`);
+        }
+
+        return res.json() as Promise<AnalysisResult>;
+      } catch (err) {
+        throw err instanceof Error ? err : new Error("Failed to analyze URL");
+      }
     },
   });
 
@@ -39,6 +47,16 @@ export default function AnalyzePage() {
       ? error.message
       : "We couldn't complete the audit. Please try again.";
   }, [error, isError]);
+
+  const analysis = data?.analysis;
+  const seoCount = analysis?.seoCount ?? 0;
+  const socialCount = analysis?.socialCount ?? 0;
+  const technicalCount = analysis?.technicalCount ?? 0;
+  const missingCount = analysis?.missingCount ?? 0;
+  const totalCount = analysis?.totalCount ?? 0;
+  const timestamp = analysis?.timestamp ?? "Unknown";
+  const analyzedUrl = analysis?.url ?? "Unknown URL";
+  const healthScore = analysis?.healthScore ?? "N/A";
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -59,32 +77,31 @@ export default function AnalyzePage() {
         <LoadingState isVisible={isPending} />
 
         <ErrorState isVisible={isError} errorMessage={errorMessage} onRetry={reset} />
-
-        {data && !isPending && !isError && (
+        {analysis && !isPending && !isError && (
           <Card className="bg-white shadow-md border border-slate-200">
             <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="space-y-1">
                 <CardTitle className="text-2xl flex items-center gap-2">
                   <CheckCircle2 className="h-6 w-6 text-emerald-500" />
-                  Audit ready for {data.analysis.url}
+                  Audit ready for {analyzedUrl}
                 </CardTitle>
                 <CardDescription>
                   The Next.js endpoint returned a full meta-tag report with health scoring and recommendations.
                 </CardDescription>
               </div>
               <Badge variant="secondary" className="text-emerald-700 bg-emerald-100 border-emerald-200">
-                Health score: {data.analysis.healthScore}
+                Health score: {healthScore}
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <Metric label="SEO tags" value={data.analysis.seoCount} />
-                <Metric label="Social tags" value={data.analysis.socialCount} />
-                <Metric label="Technical tags" value={data.analysis.technicalCount} />
+                <Metric label="SEO tags" value={seoCount} />
+                <Metric label="Social tags" value={socialCount} />
+                <Metric label="Technical tags" value={technicalCount} />
                 <Metric
                   label="Missing essentials"
-                  value={data.analysis.missingCount}
-                  tone={data.analysis.missingCount > 0 ? "alert" : "default"}
+                  value={missingCount}
+                  tone={missingCount > 0 ? "alert" : "default"}
                 />
               </div>
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -92,8 +109,8 @@ export default function AnalyzePage() {
                   Review the results in your existing dashboard to validate parity while migrations continue.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline">Total tags: {data.analysis.totalCount}</Badge>
-                  <Badge variant="outline">Timestamp: {data.analysis.timestamp}</Badge>
+                  <Badge variant="outline">Total tags: {totalCount}</Badge>
+                  <Badge variant="outline">Timestamp: {timestamp}</Badge>
                 </div>
               </div>
               <div className="rounded-md border border-slate-200 bg-slate-50 p-4 flex items-start gap-3">
@@ -107,7 +124,11 @@ export default function AnalyzePage() {
                 </div>
               </div>
               <div className="flex justify-end">
-                <Button variant="outline" onClick={() => mutate(data.analysis.url)} disabled={isPending}>
+                <Button
+                  variant="outline"
+                  onClick={() => analyzedUrl && mutate(analyzedUrl)}
+                  disabled={isPending}
+                >
                   Re-run audit
                 </Button>
               </div>
