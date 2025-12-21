@@ -13,11 +13,16 @@ Provide project context and coding guidelines that AI should follow when generat
 - **PR reviews and commits:** Keep pull requests small and focused, write descriptive commit messages, and require at least one reviewer before merging.
 - **Documentation:** Add or update README, public API docs, and changelogs when introducing or changing behavior.
 - **Security & Performance:** Consider basic security practices (input validation, secrets management) and measure performance for critical paths.
+- **TypeScript & Full-stack alignment:** Prefer explicit typings, shared models, and layered services/controllers so that frontend and backend stay consistent and testable.
 
 ## Guidance for AI
 - When generating code, prefer small, pure, testable modules and include tests along with implementation.
 - Run the test suite and ensure the project builds successfully after making changes; if tests or the build fail, fix them or add/update tests and CI.
 - When proposing architectural changes, include migration steps, rationale, and tests.
 - If adding or modifying behavior, update tests and documentation in the same change whenever possible.
+- Keep guidance concise, actionable, and aligned with existing project conventions.
 
-Keep guidance concise, actionable, and aligned with existing project conventions. 
+## Full-stack TypeScript, Security, and KISS Guidance
+- Treat new features as full-stack efforts: define DTOs/responses once, reuse them via shared modules or codegen, and keep UI components, hooks, services, and middleware in sync through those contracts.
+- Validate and sanitize every trust boundary before it hits business logic; keep secrets in env/config, rotate keys, and avoid bundling credentials into client code.
+- Ship the simplest working solution that satisfies acceptance criteria, instrument happy/unhappy flows, and document future improvements (e.g., “future: swap cache for tenant-aware queue”) so the next iteration can safely extend behavior.
