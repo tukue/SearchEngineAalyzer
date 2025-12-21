@@ -1,1 +1,1 @@
-export { default } from "../client/src/components/LoadingState";
+export { default } from "@client/components/LoadingState";

@@ -1,1 +1,1 @@
-export { default } from "../client/src/components/URLInputForm";
+export { default } from "@client/components/URLInputForm";

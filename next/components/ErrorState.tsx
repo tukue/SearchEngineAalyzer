@@ -1,1 +1,1 @@
-export { default } from "../client/src/components/ErrorState";
+export { default } from "@client/components/ErrorState";
