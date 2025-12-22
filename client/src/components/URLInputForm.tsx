@@ -1,6 +1,4 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -31,6 +29,26 @@ const formSchema = z.object({
     )
 });
 
+const formResolver: Resolver<z.infer<typeof formSchema>> = async (values) => {
+  const result = formSchema.safeParse(values);
+
+  if (result.success) {
+    return { values: result.data, errors: {} };
+  }
+
+  const issue = result.error.issues[0];
+
+  return {
+    values: {},
+    errors: {
+      url: {
+        type: issue?.code ?? "validation",
+        message: issue?.message ?? "Invalid URL",
+      },
+    },
+  };
+};
+
 type URLInputFormProps = {
   onSubmit: (url: string) => void;
   isLoading: boolean;
@@ -38,7 +56,7 @@ type URLInputFormProps = {
 
 export default function URLInputForm({ onSubmit, isLoading }: URLInputFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+    resolver: formResolver,
     defaultValues: {
       url: ""
     }
