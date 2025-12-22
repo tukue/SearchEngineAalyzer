@@ -49,7 +49,8 @@ const formResolver: Resolver<z.infer<typeof formSchema>> = async (values) => {
   };
 
   return {
-    values: { url: values.url } as z.infer<typeof formSchema>,
+    // react-hook-form expects failed parses to return an empty record for values
+    values: {} as z.infer<typeof formSchema>,
     errors,
   };
 };
