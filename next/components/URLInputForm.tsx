@@ -34,7 +34,7 @@ const formResolver: Resolver<z.infer<typeof formSchema>> = async (values) => {
   if (result.success) {
     return {
       values: result.data,
-      errors: {} as FieldErrors<z.infer<typeof formSchema>>,
+      errors: {},
     };
   }
 
