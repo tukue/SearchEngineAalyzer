@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import * as cheerio from "cheerio";
 import { z } from "zod";
-import { fromZodError } from "zod-validation-error";
+import { formatZodError } from "@shared/validation";
 import { urlSchema, type AnalysisResult, type MetaTag, type Recommendation } from "@shared/schema";
 import { storage } from "@server/storage";
 
@@ -354,8 +354,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(storedAnalysis);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = fromZodError(error);
-      return NextResponse.json({ message: validationError.message || "Invalid URL format" }, { status: 400 });
+      const validationError = formatZodError(error);
+      return NextResponse.json({ message: validationError || "Invalid URL format" }, { status: 400 });
     }
 
     console.error("Next.js analyze handler error:", error);
