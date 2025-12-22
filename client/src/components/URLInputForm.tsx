@@ -49,7 +49,7 @@ const formResolver: Resolver<z.infer<typeof formSchema>> = async (values) => {
   };
 
   return {
-    values: {} as z.infer<typeof formSchema>,
+    values: { url: values.url } as z.infer<typeof formSchema>,
     errors,
   };
 };
