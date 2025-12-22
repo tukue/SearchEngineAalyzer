@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { buildHealthResponse } from "@shared/health";
+import { buildHealthResponse } from "../../shared/health";
 
 const HEALTH_ENDPOINT_NAME = "health";
 

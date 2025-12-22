@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import * as cheerio from "cheerio";
 import { z } from "zod";
-import { formatZodError } from "@shared/validation";
-import { urlSchema, type AnalysisResult, type MetaTag, type Recommendation } from "@shared/schema";
-import { storage } from "@server/storage";
+import { formatZodError } from "../../shared/validation";
+import { urlSchema, type AnalysisResult, type MetaTag, type Recommendation } from "../../shared/schema";
+import { storage } from "../../server/storage";
 
 const importantSeoTags = ["title", "description", "keywords", "viewport", "canonical"];
 const importantSocialTags = [
