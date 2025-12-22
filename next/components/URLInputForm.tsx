@@ -51,9 +51,9 @@ const formResolver: Resolver<FormValues> = async (values): Promise<ResolverResul
 
   return {
     // react-hook-form expects failed parses to return an empty record for values
-    values: {} as FormValues,
+    values: {},
     errors,
-  };
+  } satisfies ResolverResult<FormValues>;
 };
 
 type URLInputFormProps = {
