@@ -1,4 +1,4 @@
-import { useForm, type Resolver, type ResolverResult } from "react-hook-form";
+import { useForm, type FieldErrors, type Resolver } from "react-hook-form";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -35,21 +35,23 @@ const formResolver: Resolver<z.infer<typeof formSchema>> = async (values) => {
   if (result.success) {
     return {
       values: result.data,
-      errors: {},
-    } satisfies ResolverResult<z.infer<typeof formSchema>>;
+      errors: {} as FieldErrors<z.infer<typeof formSchema>>,
+    };
   }
 
   const issue = result.error.issues[0];
 
+  const errors: FieldErrors<z.infer<typeof formSchema>> = {
+    url: {
+      type: issue?.code ?? "validation",
+      message: issue?.message ?? "Invalid URL",
+    },
+  };
+
   return {
     values: {} as z.infer<typeof formSchema>,
-    errors: {
-      url: {
-        type: issue?.code ?? "validation",
-        message: issue?.message ?? "Invalid URL",
-      },
-    },
-  } satisfies ResolverResult<z.infer<typeof formSchema>>;
+    errors,
+  };
 };
 
 type URLInputFormProps = {
