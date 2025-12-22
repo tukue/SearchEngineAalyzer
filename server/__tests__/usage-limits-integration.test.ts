@@ -28,7 +28,9 @@ describe("Usage Limits Integration", () => {
     // Get the mocked storage instance
     mockStorage = require("../storage").storage;
     
-    server = await registerRoutes(app);
+    const result = await registerRoutes(app, { createServer: false });
+    app = result.app;
+    server = result.server;
   });
 
   afterEach(() => {

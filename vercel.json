@@ -1,9 +1,21 @@
 {
   "version": 2,
-  "installCommand": "npm install && npm --prefix next install",
+  "functions": {
+    "api/index.ts": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 10,
+      "memory": 1024,
+      "includeFiles": ["server/**", "shared/**"]
+    }
+  },
+  "installCommand": "npm ci --legacy-peer-deps",
   "buildCommand": "npm run build",
   "outputDirectory": "next/.next",
   "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "api/index.ts"
+    },
     {
       "src": "/(.*)",
       "dest": "next/$1"

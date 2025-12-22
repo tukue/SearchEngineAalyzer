@@ -16,6 +16,8 @@
     "next:dev": "next dev next",
     "next:build": "next build next",
     "next:start": "next start next",
+    "lint": "npm --prefix next run lint",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p next/tsconfig.json",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "test": "jest",
