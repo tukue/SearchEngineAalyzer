@@ -4,13 +4,13 @@ import { useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, ShieldAlert } from "lucide-react";
 
-import URLInputForm from "@/components/URLInputForm";
-import LoadingState from "@/components/LoadingState";
-import ErrorState from "@/components/ErrorState";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { apiRequest } from "@/lib/queryClient";
+import URLInputForm from "../../../components/URLInputForm";
+import LoadingState from "../../../components/LoadingState";
+import ErrorState from "../../../components/ErrorState";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
+import { Badge } from "../../../components/ui/badge";
+import { Button } from "../../../components/ui/button";
+import { apiRequest } from "../../../lib/queryClient";
 import { type AnalysisResult } from "@shared/schema";
 
 export default function AnalyzePage() {
