@@ -26,6 +26,7 @@ Add:
 
 ## Environment variables
 - `API_BASE_URL` - API origin used by Next.js rewrites; set under `Project Settings > Environment Variables` in the Vercel dashboard (or via `.vercel/env.*`).
+- `NEXT_MIGRATED_API_ENDPOINTS` - Optional comma-separated list of migrated endpoints that should keep running on Next.js (e.g., include `history` once the search history routes are moved to `app/api`).
 
 ## Manual Deployment
 ```bash
