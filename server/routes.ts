@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, getDefaultTenantContext } from "./storage";
 import { requireEntitlement, PlanGatingService } from "./plan-gating";
 import { checkAndReserveQuota, addQuotaToResponse, UsageLimitsService } from "./usage-limits";
 import express from "express";

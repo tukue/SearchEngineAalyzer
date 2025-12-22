@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { storage, getDefaultTenantContext } from '../server/storage';
 import { urlSchema } from '../shared/schema';
 import { z } from 'zod';
-import { formatZodError } from '../shared/validation';
+import { formatZodError } from '@shared/validation';
 import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
 
