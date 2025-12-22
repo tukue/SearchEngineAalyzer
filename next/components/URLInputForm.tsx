@@ -1,4 +1,4 @@
-import { useForm, type FieldErrors, type Resolver } from "react-hook-form";
+import { useForm, type FieldErrors, type Resolver, type ResolverResult } from "react-hook-form";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
 import { Input } from "./ui/input";
@@ -28,7 +28,9 @@ const formSchema = z.object({
     ),
 });
 
-const formResolver: Resolver<z.infer<typeof formSchema>> = async (values) => {
+type FormValues = z.infer<typeof formSchema>;
+
+const formResolver: Resolver<FormValues> = async (values): Promise<ResolverResult<FormValues>> => {
   const result = formSchema.safeParse(values);
 
   if (result.success) {
@@ -40,7 +42,7 @@ const formResolver: Resolver<z.infer<typeof formSchema>> = async (values) => {
 
   const issue = result.error.issues[0];
 
-  const errors: FieldErrors<z.infer<typeof formSchema>> = {
+  const errors: FieldErrors<FormValues> = {
     url: {
       type: issue?.code ?? "validation",
       message: issue?.message ?? "Invalid URL",
@@ -49,7 +51,7 @@ const formResolver: Resolver<z.infer<typeof formSchema>> = async (values) => {
 
   return {
     // react-hook-form expects failed parses to return an empty record for values
-    values: {} as z.infer<typeof formSchema>,
+    values: {} as FormValues,
     errors,
   };
 };
