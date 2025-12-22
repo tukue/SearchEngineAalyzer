@@ -321,11 +321,8 @@ export async function POST(req: NextRequest) {
     const presentImportantTags = totalImportantTags - missingCount;
     const healthScore = Math.round((presentImportantTags / totalImportantTags) * 100);
 
-    const tenantId = 1; // Default tenant for MVP
-
     const normalizedMetaTags: MetaTag[] = foundMetaTags.map((tag) => ({
       id: 0,
-      tenantId,
       url: normalizedUrl,
       name: tag.name ?? null,
       property: tag.property ?? null,
@@ -340,7 +337,6 @@ export async function POST(req: NextRequest) {
     const analysisResult: AnalysisResult = {
       analysis: {
         id: 0,
-        tenantId,
         url: normalizedUrl,
         totalCount: foundMetaTags.length,
         seoCount,

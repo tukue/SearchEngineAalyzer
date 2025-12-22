@@ -4,7 +4,6 @@ import { z } from "zod";
 
 export const metaTags = pgTable("meta_tags", {
   id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id").notNull(),
   url: text("url").notNull(),
   name: text("name"),
   property: text("property"),
@@ -18,7 +17,6 @@ export const metaTags = pgTable("meta_tags", {
 
 export const analyses = pgTable("analyses", {
   id: serial("id").primaryKey(),
-  tenantId: integer("tenant_id").notNull(),
   url: text("url").notNull(),
   totalCount: integer("total_count").notNull(),
   seoCount: integer("seo_count").notNull(),
