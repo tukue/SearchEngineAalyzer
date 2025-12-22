@@ -14,7 +14,7 @@ import { JobQueue } from "./jobQueue";
 const auditService = new AuditService(storage);
 const auditQueue = new JobQueue((job: AuditJobPayload) => auditService.processJob(job));
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export function createApiRouter(): express.Router {
   const apiRouter = express.Router();
   apiRouter.use(tenantMiddleware);
 
@@ -273,8 +273,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-  app.use("/api", apiRouter);
+  return apiRouter;
+}
 
+export async function registerRoutes(app: Express): Promise<Server> {
+  app.use("/api", createApiRouter());
   const httpServer = createServer(app);
   return httpServer;
 }
