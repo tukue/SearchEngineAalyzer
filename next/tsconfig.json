@@ -4,9 +4,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*", "../client/src/*"],
-      "@client/*": ["../client/src/*"],
-      "@shared/*": ["./shared/*"],
-      "@server/*": ["./server/*"]
+      "@shared/*": ["../shared/*"],
+      "@server/*": ["../server/*"]
     },
     "types": ["node", "next", "next/image-types/global", "react", "react-dom"],
     "typeRoots": ["../node_modules/@types"],
