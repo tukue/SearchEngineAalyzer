@@ -9,9 +9,9 @@
     "lint": "echo \"Skipping lint: ESLint is not available in this environment\""
   },
   "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "next": "^15.1.2",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "next": "^15.5.9",
     "cheerio": "^1.0.0",
     "zod": "^3.23.8",
     "zod-validation-error": "^3.4.0",
@@ -21,13 +21,13 @@
   "devDependencies": {
     "typescript": "^5",
     "@types/node": "^20",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
     "@tailwindcss/typography": "^0.5.15",
-    "eslint": "^8",
-    "eslint-config-next": "^15.1.2"
+    "eslint": "^9",
+    "eslint-config-next": "^15.5.9"
   }
 }
