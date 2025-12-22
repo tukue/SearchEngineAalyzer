@@ -13,8 +13,8 @@ const nextConfig = {
       ...(config.resolve.alias || {}),
       "@": path.resolve(__dirname),
       "@client": path.resolve(__dirname, "../client/src"),
-      "@shared": path.resolve(__dirname, "../shared"),
-      "@server": path.resolve(__dirname, "../server")
+      "@shared": path.resolve(__dirname, "./shared"),
+      "@server": path.resolve(__dirname, "./server")
     };
     return config;
   },
