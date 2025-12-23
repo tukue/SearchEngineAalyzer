@@ -25,8 +25,8 @@ This matches Vercel’s expectations: `api/` becomes serverless functions, and t
 {
   "version": 2,
   "functions": {
-    "api/**/*.js": { "runtime": "nodejs18.x" },
-    "api/**/*.ts": { "runtime": "nodejs18.x" }
+    "api/**/*.js": { "runtime": "nodejs20.x" },
+    "api/**/*.ts": { "runtime": "nodejs20.x" }
   },
   "builds": [
     { "src": "client/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
