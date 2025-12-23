@@ -25,15 +25,15 @@ Add:
 - `VERCEL_PROJECT_ID` - Your project ID
 
 ## Environment variables
-- `API_BASE_URL` - API origin used by Next.js rewrites; set under `Project Settings > Environment Variables` in the Vercel dashboard (or via `.vercel/env.*`).
-- `NEXT_MIGRATED_API_ENDPOINTS` - Optional comma-separated list of migrated endpoints that should keep running on Next.js (e.g., include `history` once the search history routes are moved to `app/api`).
+- `API_BASE_URL` - API origin used by the Express functions; set under `Project Settings > Environment Variables` in the Vercel dashboard (or via `.vercel/env.*`).
+- Any client-exposed variables must be prefixed with `VITE_` (e.g., `VITE_API_BASE_URL`). Server-only secrets are read via `process.env` in `api/` handlers.
 
 ## Verification checklist (local + Vercel)
-- Node version: **20.x** (Vercel inherits this from the repo root `package.json`).
-- Install step: `npm install` at the repo root (runs the `postinstall` hook to install `next` workspace deps).
-- Build step: `npm run build` (invokes the workspace build the same way GitHub Actions does).
-- Expected output path: `next/.next`.
-- If a clean-room check is needed, run locally: `rm -rf node_modules next/node_modules && npm install --legacy-peer-deps && npm run build`.
+- Node version: **20.x** (Vercel inherits this from the repo root `package.json` and the Project Settings Node version should match).
+- Install step: `npm install --legacy-peer-deps` at the repo root (matches the Vercel `installCommand`).
+- Build step: `npm run build` (runs the Vite build and emits `dist/public`).
+- Expected output path: `dist/public`.
+- If a clean-room check is needed, run locally: `rm -rf node_modules && npm install --legacy-peer-deps && npm run build`.
 
 ## Manual Deployment
 ```bash
