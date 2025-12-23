@@ -6,6 +6,7 @@ This guide explains how to set up and operate a minimal continuous deployment pi
 - **Pull Requests**: Every PR creates an isolated **Preview Deployment**. Vercel auto-builds from the PR branch and posts a preview URL. Environment variables scoped to “Preview” are used.
 - **`main` branch**: Merges or direct pushes to `main` trigger a **Production Deployment**. Vercel promotes the build to the production domain and uses “Production” environment variables.
 - **Vercel automation**: Vercel handles build orchestration, serverless packaging for the `api/` folder, static hosting for the `client/` build, preview URLs, and GitHub status checks. No extra CI is required unless you want tests before deploy.
+- **Alternate variants**: If you need a separate variant (e.g., white-label or enterprise edition), create a second Vercel project that points to the same repo but uses a different root directory or env var set. Each project will still auto-create previews for PRs and deploy `main` to its own production domain.
 
 ## 2. Vercel Configuration
 ### Repository structure
@@ -45,6 +46,7 @@ Notes:
 ## 3. Environment Variables
 - Configure env vars in **Vercel Project Settings → Environment Variables**.
 - Provide values for both **Preview** and **Production** scopes when appropriate (e.g., `API_BASE_URL`, `DATABASE_URL`, `THIRD_PARTY_KEY`). PR previews automatically pick Preview values; `main` uses Production values.
+- For multi-variant setups that use separate Vercel projects, keep env vars isolated per project to prevent cross-talk (e.g., use distinct API keys, domains, and feature flags).
 - Frontend variables that should be exposed to the browser must be prefixed with `VITE_` and read via `import.meta.env.VITE_*`.
 - Backend/serverless code reads from `process.env.*`. Avoid referencing secret vars in client code without a `VITE_` prefix; otherwise, they remain undefined in the browser.
 
@@ -70,6 +72,7 @@ Adjust `dev:api` to match your local Express runner (e.g., `nodemon api/index.ts
 - **Environment variables missing in preview**: Add Preview-scope values in Vercel settings. Client vars must be prefixed with `VITE_`; serverless vars are read via `process.env`.
 - **Mismatch between local and Vercel Node version**: Align local Node version with Vercel runtime (Node 18.x above). Set `engines.node` in `package.json` if needed.
 - **Unexpected rebuilds or missing lockfile**: Commit `package-lock.json`/`pnpm-lock.yaml` to keep installs reproducible across previews and production builds.
+- **Multiple variants share a repo**: If you spin up separate Vercel projects (e.g., "app-enterprise" and "app-standard"), ensure each has its own domain, environment variables, and `vercel.json` overrides as needed. Keep build outputs distinct by using the project’s Root Directory setting.
 
 ## Quick Start for New Contributors
 1. Fork/clone, run `npm install` at root and inside `client/`.
