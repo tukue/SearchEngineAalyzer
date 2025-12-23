@@ -28,8 +28,7 @@ This matches Vercel’s expectations: `api/` becomes serverless functions, and t
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
   "functions": {
-    "api/**/*.ts": { "runtime": "nodejs20.x" },
-    "api/**/*.js": { "runtime": "nodejs20.x" }
+    "api/**/*.{js,ts}": { "runtime": "nodejs20.x" }
   },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
@@ -67,7 +66,7 @@ npm run lint && npm test        # Optional: run repo checks before pushing
 Adjust the Express dev command to your preferred runner if needed (e.g., `nodemon server/index.ts`).
 
 ## 5. Common Pitfalls & Fixes
-- **Vercel build error "Function Runtimes must have a valid version"**: This happens when the `functions` section in `vercel.json` is missing or the runtime string is invalid (for example, `nodejs20` instead of `nodejs20.x`, or relying on brace expansion that Vercel does not parse). The repo already pins both JS and TS handlers to `nodejs20.x` under `api/**/*.js` and `api/**/*.ts`, which satisfies the requirement—no need to upgrade to Node 24.x while the project targets Node 20.x via `package.json` and Vercel project settings.
+- **Vercel build error "Function Runtimes must have a valid version"**: This happens when the `functions` section in `vercel.json` is missing or the runtime string is invalid (for example, `nodejs20` instead of `nodejs20.x`, or relying on brace expansion that Vercel does not parse). The repo pins all API handlers to `nodejs20.x` with a single `api/**/*.{js,ts}` glob, so no Node 24.x upgrade is required while the project targets Node 20.x via `package.json` and Vercel project settings.
 - **API routes return 404**: Ensure routes are under `api/` with file-based endpoints (e.g., `api/users.ts`). Confirm `routes` in `vercel.json` include `{ "src": "/api/(.*)", "dest": "/api/$1" }` so API requests bypass the static frontend.
 - **Vite assets not loading in production**: Verify `client` build output folder matches `distDir` (`dist`). If using a custom base path, set `base` in `vite.config.ts` accordingly.
 - **Environment variables missing in preview**: Add Preview-scope values in Vercel settings. Client vars must be prefixed with `VITE_`; serverless vars are read via `process.env`.
