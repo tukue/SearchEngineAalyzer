@@ -12,13 +12,6 @@ This guide explains how to run side-by-side continuous deployment pipelines for 
 ## 2. Vercel Configuration
 ### Repository structure
 ```
-/
-├─ api/            # Express serverless entry points (Vercel functions)
-├─ client/         # Vite app (React or similar)
-├─ package.json    # Express + Vite dependencies only
-├─ vercel.json     # Express + Vite Vercel config
-├─ next/           # Next.js variant with its own package.json + vercel.json
-```
 
 ### `vercel.json` (Express + Vite project root)
 ```json
