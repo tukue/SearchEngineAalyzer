@@ -28,8 +28,8 @@ This matches Vercel’s expectations: `api/` becomes serverless functions, and t
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
   "functions": {
-    "api/**/*.ts": { "runtime": "nodejs18.x" },
-    "api/**/*.js": { "runtime": "nodejs18.x" }
+    "api/**/*.ts": { "runtime": "nodejs20.x" },
+    "api/**/*.js": { "runtime": "nodejs20.x" }
   },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
@@ -70,7 +70,7 @@ Adjust the Express dev command to your preferred runner if needed (e.g., `nodemo
 - **API routes return 404**: Ensure routes are under `api/` with file-based endpoints (e.g., `api/users.ts`). Confirm `routes` in `vercel.json` include `{ "src": "/api/(.*)", "dest": "/api/$1" }` so API requests bypass the static frontend.
 - **Vite assets not loading in production**: Verify `client` build output folder matches `distDir` (`dist`). If using a custom base path, set `base` in `vite.config.ts` accordingly.
 - **Environment variables missing in preview**: Add Preview-scope values in Vercel settings. Client vars must be prefixed with `VITE_`; serverless vars are read via `process.env`.
-- **Mismatch between local and Vercel Node version**: Align local Node version with Vercel runtime (Node 18.x above). Set `engines.node` in `package.json` if needed and match it in Vercel Project Settings → General → Node.js Version; otherwise Vercel will honor `engines` and ignore the project setting. This repo pins Node 24.x to match a Vercel project set to 24.x—keep both in sync to avoid warnings.
+- **Mismatch between local and Vercel Node version**: Align local Node version with Vercel runtime (Node 20.x). Set `engines.node` in `package.json` if needed and match it in Vercel Project Settings → General → Node.js Version; otherwise Vercel will honor `engines` and ignore the project setting. This repo pins Node 20.x to match a Vercel project set to 20.x—keep both in sync to avoid warnings.
 - **Unexpected rebuilds or missing lockfile**: Commit `package-lock.json`/`pnpm-lock.yaml` to keep installs reproducible across previews and production builds.
 - **`npm install` fails with ERESOLVE on Vercel**: Ensure the Node.js version matches what the lockfile was created with (see above). If peer conflicts persist (e.g., React 19 with libraries that still declare React 18 peers), use the `installCommand` above with `--legacy-peer-deps` or fix peer ranges locally and regenerate the lockfile. Keep the Vercel install command in sync with how you install locally.
 - **Multiple variants share a repo**: If you spin up separate Vercel projects (e.g., "app-enterprise" and "app-standard"), ensure each has its own domain, environment variables, and `vercel.json` overrides as needed. Keep build outputs distinct by using the project’s Root Directory setting.
@@ -94,7 +94,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: npm
       - run: npm ci
       - run: npm run lint --if-present

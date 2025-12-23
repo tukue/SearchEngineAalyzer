@@ -29,7 +29,7 @@ Add:
 - Any client-exposed variables must be prefixed with `VITE_` (e.g., `VITE_API_BASE_URL`). Server-only secrets are read via `process.env` in `api/` handlers.
 
 ## Verification checklist (local + Vercel)
-- Node version: **24.x** (Vercel inherits this from the repo root `package.json` and the Project Settings Node version should match).
+- Node version: **20.x** (Vercel inherits this from the repo root `package.json` and the Project Settings Node version should match).
 - Install step: `npm install --legacy-peer-deps` at the repo root (matches the Vercel `installCommand`).
 - Build step: `npm run build` (runs the Vite build and emits `dist/public`).
 - Expected output path: `dist/public`.
