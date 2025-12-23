@@ -141,6 +141,7 @@ Integration tips:
 - **Next.js**: Lives entirely in `next/package.json` with its own lockfile and Vercel project rooted at `next/`.
 - **Why split**: Avoids peer conflicts (React 19 + Vite vs. Next.js), keeps installs smaller per deployment, and lets each framework evolve at its own pace.
 - **Workspace option**: If you want a single lockfile, you can add npm workspaces that include `.` and `next/`, but keep framework-specific deps inside their respective `package.json` files.
+- **Detailed plan**: See `docs/dependency-separation.md` for two supported models (fully independent installs vs. a workspace-controlled single lockfile) and a rollout checklist.
 
 ## Quick Start for New Contributors
 1. Install root deps and run `npm run dev:client` (Vite) plus `npm run dev` (Express). For the Next.js variant, `cd next && npm install` then `npm run dev`.
