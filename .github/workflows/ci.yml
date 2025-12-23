@@ -10,47 +10,29 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Verify .nvmrc is present
-      run: |
-        test -f .nvmrc
-        echo "Using Node version from .nvmrc: $(cat .nvmrc)"
+      - name: Verify .nvmrc is present
+        run: |
+          test -f .nvmrc
+          echo "Using Node version from .nvmrc: $(cat .nvmrc)"
 
-    - name: Use Node.js from .nvmrc
-      uses: actions/setup-node@v4
-      with:
-        node-version-file: '.nvmrc'
-        cache: 'npm'
-        cache-dependency-path: |
-          package-lock.json
-          next/package-lock.json
+      - name: Use Node.js from .nvmrc
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            next/package-lock.json
 
-    - name: Verify Node version
-      run: node --version
+      - name: Verify Node version
+        run: node --version
 
-    - name: Install dependencies (root + next)
-      run: |
-        npm install --legacy-peer-deps
-        npm --prefix next install --legacy-peer-deps
+      - name: Install dependencies (root + next)
+        run: |
+          npm install --legacy-peer-deps
+          npm --prefix next install --legacy-peer-deps
 
-    - name: Run linting
-      run: npm run lint || echo "Linting skipped"
-
-    - name: Run unit tests
-      run: npm test -- --runInBand --ci
-
-    - name: Run structure tests
-      run: node test.js
-
-    - name: Run API tests
-      run: node api-test.js
-
-    - name: Run frontend tests
-      run: node frontend-check.js
-
-    - name: Run all tests with test script
-      run: bash npm-test.sh
-
-    - name: Build application
-      run: npm run build --if-present
+      - name: Run consolidated CI checks
+        run: npm run ci:checks

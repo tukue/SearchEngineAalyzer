@@ -13,7 +13,7 @@ This plan keeps improvements bite-sized so we can ship them incrementally while 
 2. **Single install recipe** (reduces churn)
    - Adopt one command for all contexts: `npm install --legacy-peer-deps && npm --prefix next install`. Add it to the workflow, Vercel settings, and `docs/ci-cd.md`.
 3. **Lean CI job** (fast feedback)
-   - In `.github/workflows/ci.yml`, run only: lint (or skip message), `node test.js`, `node api-test.js`, `node frontend-check.js`, `bash npm-test.sh`, root build, then Next lint/build. Enable npm cache keyed by `package-lock.json`.
+   - In `.github/workflows/ci.yml`, keep the job to a few steps: verify `.nvmrc`, set up Node with caching, install deps once, then run `npm run ci:checks` (lint → Jest → aggregated tests → builds). Avoid duplicating individual test invocations.
 4. **Env var guardrail** (prevents broken previews)
    - Add a small script that fails CI early when required env vars are missing for backend or Next builds. Reference it from the workflow before builds.
 5. **Preview smoke ping** (safety net)

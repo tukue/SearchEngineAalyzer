@@ -21,17 +21,13 @@ This repository contains a Node/TypeScript backend at the root and a Next.js fro
 ## CI Pipeline (GitHub Actions)
 - **Workflow file:** `.github/workflows/ci.yml`.
 - **Node & package manager:** Node.js 20 (pinned in `.nvmrc` and `package.json`) using npm with caching for both `package-lock.json` files.
-- **Checks that run:**
+- **Checks that run (KISS, via one command):**
   - Install dependencies with `npm install --legacy-peer-deps` and `npm --prefix next install --legacy-peer-deps` (same recipe everywhere).
-  - Lint (optional fallback): `npm run lint || echo "Linting skipped"`.
-  - Unit tests: `npm test -- --runInBand --ci`.
-  - Structure/API/frontend scripts: `node test.js`, `node api-test.js`, `node frontend-check.js`.
-  - Aggregated test runner: `bash npm-test.sh`.
-  - Build: `npm run build --if-present` (triggers Next.js build via `npm --prefix next run build`).
+  - Execute `npm run ci:checks`, which handles lint (skippable), Jest in CI mode, the aggregated test suite (`bash npm-test.sh`), root build, and Next.js lint/build.
 - **Run the same checks locally:**
   ```bash
   npm install --legacy-peer-deps && npm --prefix next install --legacy-peer-deps
-  npm run ci:checks  # runs the same validations plus Next.js lint/build
+  npm run ci:checks  # same steps as CI (also used by `ci:local`)
   ```
 
 ## CD Pipeline (Vercel)
