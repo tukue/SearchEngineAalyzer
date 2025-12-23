@@ -34,6 +34,7 @@ Add:
 - Install step: `npm install --legacy-peer-deps` at the repo root for Express + Vite, and `npm install --legacy-peer-deps` inside `next/` for the Next.js project.
 - Build step: `npm run build` (root) and `(cd next && npm run build)`.
 - Outputs: `dist/public` for Vite; `.next` handled automatically by Vercel.
+- `.vercelignore` should keep source and config files (`client/`, `server/`, `shared/`, `vite.config.ts`, lockfiles) so Vercel can build; only tests/logs/caches are ignored in the current file.
 - Clean-room check: `rm -rf node_modules && npm install --legacy-peer-deps && npm run build` (repeat inside `next/`).
 
 ## Manual Deployment

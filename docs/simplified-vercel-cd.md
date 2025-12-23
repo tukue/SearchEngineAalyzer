@@ -41,6 +41,7 @@ This guide explains how to run side-by-side continuous deployment pipelines for 
 Notes:
 - The `installCommand` uses legacy peer resolution to dodge React 19 peer conflicts. If you later align peer deps, you can revert to `npm ci`/`npm install`.
 - Root directory for this project is the repo root so Vercel picks up `api/`, `client/`, and this config. The Vite build uses `vite.config.ts` (outputs to `dist/public`).
+- Ensure `.vercelignore` does **not** exclude `client/`, `server/`, `shared/`, `vite.config.ts`, or the lockfile—Vercel needs those to build. The repo uses a minimal ignore list that only drops tests, logs, and caches.
 
 ### `next/vercel.json` (Next.js project root)
 ```json
