@@ -38,7 +38,9 @@ describe('Plan Gating Integration Tests', () => {
     process.env.API_AUTH_TOKEN = testToken;
     app = express();
     app.use(express.json());
-    server = await registerRoutes(app);
+    const result = await registerRoutes(app, { createServer: false });
+    app = result.app;
+    server = result.server;
   });
 
   beforeEach(async () => {

@@ -12,7 +12,16 @@ import * as cheerio from "cheerio";
 import { requireAuthContext } from "./context";
 import { buildHealthResponse } from "../shared/health";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export interface RegisterRoutesOptions {
+  createServer?: boolean;
+}
+
+export interface RegisterRoutesResult {
+  app: Express;
+  server?: Server;
+}
+
+export async function registerRoutes(app: Express, options: RegisterRoutesOptions = {}): Promise<RegisterRoutesResult> {
   // API routes
   const apiRouter = express.Router();
   
@@ -458,6 +467,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.use("/api", apiRouter);
   
-  const httpServer = createServer(app);
-  return httpServer;
+  const httpServer = options.createServer === false ? undefined : createServer(app);
+  return { app, server: httpServer };
 }
