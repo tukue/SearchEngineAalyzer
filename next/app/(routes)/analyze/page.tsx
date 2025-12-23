@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { apiRequest } from "../../../lib/queryClient";
-import { type AnalysisResult } from "@shared/schema";
+import { type AnalysisResult } from "../../shared/schema";
 
 export default function AnalyzePage() {
   const {
