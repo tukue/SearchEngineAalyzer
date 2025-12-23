@@ -10,21 +10,29 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Use Node.js from .nvmrc
-      uses: actions/setup-node@v4
-      with:
-        node-version-file: '.nvmrc'
-        cache: 'npm'
-        cache-dependency-path: |
-          package-lock.json
-          next/package-lock.json
+      - name: Verify .nvmrc is present
+        run: |
+          test -f .nvmrc
+          echo "Using Node version from .nvmrc: $(cat .nvmrc)"
 
-    - name: Install dependencies (root + next)
-      run: |
-        npm install --legacy-peer-deps
-        npm --prefix next install --legacy-peer-deps
+      - name: Use Node.js from .nvmrc
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            next/package-lock.json
 
-    - name: Run CI checks
-      run: npm run ci:checks
+      - name: Verify Node version
+        run: node --version
+
+      - name: Install dependencies (root + next)
+        run: |
+          npm install --legacy-peer-deps
+          npm --prefix next install --legacy-peer-deps
+
+      - name: Run consolidated CI checks
+        run: npm run ci:checks
