@@ -29,7 +29,7 @@ Add:
 - Any client-exposed variables must be prefixed with `VITE_` (e.g., `VITE_API_BASE_URL`). Server-only secrets are read via `process.env` in `api/` handlers.
 
 ## Verification checklist (local + Vercel)
-- Node version: **20.x** (Vercel inherits this from the repo root `package.json` and the Project Settings Node version should match; the build error `Function Runtimes must have a valid version` appears if runtimes are not set to `nodejs20.x` for the `api/**/*.{js,ts}` handlers).
+- Node version: **20.x** (Vercel inherits this from the repo root `package.json` and the Project Settings Node version should match; the build error `Function Runtimes must have a valid version` appears if runtimes are not set to `nodejs20.x` for both `api/**/*.js` and `api/**/*.ts` handlers).
 - Install step: `npm install --legacy-peer-deps` at the repo root (matches the Vercel `installCommand`).
 - Build step: `npm run build` (runs the Vite build and emits `dist/public`).
 - Expected output path: `dist/public`.
