@@ -7,6 +7,7 @@ This guide explains how to set up and operate a minimal continuous deployment pi
 - **`main` branch**: Merges or direct pushes to `main` trigger a **Production Deployment**. Vercel promotes the build to the production domain and uses “Production” environment variables.
 - **Vercel automation**: Vercel handles build orchestration, serverless packaging for the `api/` folder, static hosting for the `client/` build, preview URLs, and GitHub status checks. No extra CI is required unless you want tests before deploy.
 - **Alternate variants**: If you need a separate variant (e.g., white-label or enterprise edition), create a second Vercel project that points to the same repo but uses a different root directory or env var set. Each project will still auto-create previews for PRs and deploy `main` to its own production domain.
+- **Optional CI gate before deploy**: Add a lightweight GitHub Actions workflow (see §6) to run lint/tests on pull requests and `main` pushes. Vercel will wait for required status checks to pass before shipping.
 
 ## 2. Vercel Configuration
 ### Repository structure
@@ -73,6 +74,44 @@ Adjust `dev:api` to match your local Express runner (e.g., `nodemon api/index.ts
 - **Mismatch between local and Vercel Node version**: Align local Node version with Vercel runtime (Node 18.x above). Set `engines.node` in `package.json` if needed.
 - **Unexpected rebuilds or missing lockfile**: Commit `package-lock.json`/`pnpm-lock.yaml` to keep installs reproducible across previews and production builds.
 - **Multiple variants share a repo**: If you spin up separate Vercel projects (e.g., "app-enterprise" and "app-standard"), ensure each has its own domain, environment variables, and `vercel.json` overrides as needed. Keep build outputs distinct by using the project’s Root Directory setting.
+
+## 6. Optional CI/CD Guardrails (GitHub Actions)
+Use Vercel for deployment and add a minimal CI workflow to keep previews and production healthy.
+
+### Workflow file (`.github/workflows/ci.yml`)
+```yaml
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+      - run: npm ci
+      - run: npm run lint --if-present
+      - run: npm test --if-present
+      - run: |
+          cd client
+          npm ci
+          npm run build
+```
+
+### How it integrates with Vercel
+- Connect the repo to Vercel with GitHub App integration. Set the project Root Directory to `/`.
+- In Vercel Project Settings → Git, mark the **CI** workflow as a required status check for `main`. Vercel waits for required checks before promoting a deployment.
+- When a PR opens, GitHub Actions runs `CI` and Vercel builds a Preview. If tests fail, the status check blocks merge; if tests pass, merging to `main` triggers Vercel Production deployment.
+
+### Secrets and env handling in CI
+- Add any needed secrets (e.g., private registry tokens) to GitHub repo secrets; keep application secrets in Vercel envs. Tests that need runtime secrets should use GitHub **Actions secrets**, while browser-exposed vars must still be prefixed with `VITE_` and injected via `.env` files or Vercel env scopes.
 
 ## Quick Start for New Contributors
 1. Fork/clone, run `npm install` at root and inside `client/`.
