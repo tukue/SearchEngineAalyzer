@@ -1,13 +1,13 @@
-# Simplified CD Pipeline for Express + Vite on Vercel
+# Simplified CD Pipelines for Express + Vite and Next.js on Vercel
 
-This guide explains how to set up and operate a minimal continuous deployment pipeline for a single-repo Express + Vite application on Vercel.
+This guide explains how to run side-by-side continuous deployment pipelines for the Express + Vite stack and the optional Next.js variant in this repository. Each framework has its own dependencies, build commands, and Vercel project so teams can iterate independently without cross-breaking installs.
 
 ## 1. Deployment Flow (High Level)
-- **Pull Requests**: Every PR creates an isolated **Preview Deployment**. Vercel auto-builds from the PR branch and posts a preview URL. Environment variables scoped to “Preview” are used.
-- **`main` branch**: Merges or direct pushes to `main` trigger a **Production Deployment**. Vercel promotes the build to the production domain and uses “Production” environment variables.
-- **Vercel automation**: Vercel handles build orchestration, serverless packaging for the `api/` folder, static hosting for the `client/` build, preview URLs, and GitHub status checks. No extra CI is required unless you want tests before deploy.
-- **Alternate variants**: If you need a separate variant (e.g., white-label or enterprise edition), create a second Vercel project that points to the same repo but uses a different root directory or env var set. Each project will still auto-create previews for PRs and deploy `main` to its own production domain.
-- **Optional CI gate before deploy**: Add a lightweight GitHub Actions workflow (see §6) to run lint/tests on pull requests and `main` pushes. Vercel will wait for required status checks to pass before shipping.
+- **Pull Requests**: Every PR creates a Preview Deployment for **each project** (Express+Vite and Next.js). Preview-scoped environment variables are used automatically.
+- **`main` branch**: Merges or direct pushes to `main` promote a Production Deployment per project, using Production env vars for that project.
+- **Vercel automation**: Vercel handles builds, serverless packaging for `api/` (Express) or Next.js route handlers, static hosting for Vite output, preview URLs, and GitHub status checks.
+- **Framework split**: Use two Vercel projects—one rooted at the repo root for Express + Vite, and another rooted at `/next` for the Next.js variant. Each installs only its own dependencies and runs its own build pipeline.
+- **Optional CI gate before deploy**: Add a lightweight GitHub Actions workflow (see §6) to run lint/tests on PRs and `main` pushes. Mark it as a required check in Vercel if desired.
 
 ## 2. Vercel Configuration
 ### Repository structure
@@ -15,12 +15,12 @@ This guide explains how to set up and operate a minimal continuous deployment pi
 /
 ├─ api/            # Express serverless entry points (Vercel functions)
 ├─ client/         # Vite app (React or similar)
-├─ package.json
-├─ vercel.json
+├─ package.json    # Express + Vite dependencies only
+├─ vercel.json     # Express + Vite Vercel config
+├─ next/           # Next.js variant with its own package.json + vercel.json
 ```
-This matches Vercel’s expectations: `api/` becomes serverless functions, and the frontend builds from `client/` to static assets.
 
-### `vercel.json`
+### `vercel.json` (Express + Vite project root)
 ```json
 {
   "version": 2,
@@ -39,47 +39,73 @@ This matches Vercel’s expectations: `api/` becomes serverless functions, and t
 }
 ```
 Notes:
-- The `installCommand` uses legacy peer resolution to avoid React 19 peer conflicts on Vercel. If you later align peer deps, revert to `npm ci`/`npm install`.
-- Root directory should be the repo root. Vercel will run installs at the repo root and treat `api/` as serverless while serving the static output from `dist/public`.
-- The Vite build uses the repo-level `vite.config.ts`, which already outputs to `dist/public`. If you customize `outDir`, update `outputDirectory` and the SPA catch-all route to match.
-- Express handlers live under `api/` (e.g., `api/index.ts`, `api/health.ts`); each file exports a handler as a serverless function.
+- The `installCommand` uses legacy peer resolution to dodge React 19 peer conflicts. If you later align peer deps, you can revert to `npm ci`/`npm install`.
+- Root directory for this project is the repo root so Vercel picks up `api/`, `client/`, and this config. The Vite build uses `vite.config.ts` (outputs to `dist/public`).
+
+### `next/vercel.json` (Next.js project root)
+```json
+{
+  "version": 2,
+  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "npm run build",
+  "functions": {
+    "app/api/**/*.js": { "runtime": "nodejs20.x" },
+    "app/api/**/*.ts": { "runtime": "nodejs20.x" }
+  },
+  "framework": "nextjs"
+}
+```
+Notes:
+- Set the Vercel project Root Directory to `next/`. Vercel runs installs and builds inside that folder and respects its own `package.json`.
+- Next.js output handling is automatic (`.next`); no custom `outputDirectory` needed.
+
+### Build and output configuration
+- **Express + Vite project**
+  - Install: `npm install --legacy-peer-deps`
+  - Build: `npm run build`
+  - Output: `dist/public`
+- **Next.js project**
+  - Install: `npm install --legacy-peer-deps` (inside `next/`)
+  - Build: `npm run build` (inside `next/`)
+  - Output: handled automatically by Vercel (`.next`)
+
+### How routes are exposed
+- Express handlers under `api/` map to `/api/*` routes. The SPA catch-all sends other traffic to `index.html` so the Vite app handles routing client-side.
+- Next.js route/API handlers under `next/app/api` are built and hosted by the Next.js Vercel project.
 
 ## 3. Environment Variables
-- Configure env vars in **Vercel Project Settings → Environment Variables**.
-- Provide values for both **Preview** and **Production** scopes when appropriate (e.g., `API_BASE_URL`, `DATABASE_URL`, `THIRD_PARTY_KEY`). PR previews automatically pick Preview values; `main` uses Production values.
-- For multi-variant setups that use separate Vercel projects, keep env vars isolated per project to prevent cross-talk (e.g., use distinct API keys, domains, and feature flags).
-- Frontend variables that should be exposed to the browser must be prefixed with `VITE_` and read via `import.meta.env.VITE_*`.
-- Backend/serverless code reads from `process.env.*`. Avoid referencing secret vars in client code without a `VITE_` prefix; otherwise, they remain undefined in the browser.
+- Set env vars per project under **Project Settings → Environment Variables** in Vercel.
+- Use **Preview** scope for PRs and **Production** for `main` deploys.
+- Client-facing prefixes: `VITE_` for the Vite app, `NEXT_PUBLIC_` for the Next.js app.
+- Server-only vars are read via `process.env` in Express `api/` handlers or Next.js route handlers.
 
 ## 4. Local Workflow
 ```bash
-# Install dependencies
-npm install
+# Express + Vite
+npm install --legacy-peer-deps
+npm run dev:client    # Vite dev server
+npm run dev           # Express dev server
+npm run build && npm run start
 
-# Run dev servers (two terminals)
-npm run dev:client             # Vite dev server (defaults to http://localhost:5173)
-npm run dev                    # Express dev server (defaults to http://localhost:5000)
-
-# Validate production build locally
-npm run build                  # Generates dist/public with Vite
-npm run lint && npm test        # Optional: run repo checks before pushing
+# Next.js
+cd next
+npm install --legacy-peer-deps
+npm run dev
+npm run build && npm run start
 ```
 Adjust the Express dev command to your preferred runner if needed (e.g., `nodemon server/index.ts`).
 
 ## 5. Common Pitfalls & Fixes
-- **Vercel build error "Function Runtimes must have a valid version"**: This happens when the `functions` section in `vercel.json` is missing or the runtime string is invalid (for example, `nodejs20` instead of `nodejs20.x`, or relying on brace expansion that Vercel does not parse). The repo pins all API handlers to `nodejs20.x` with explicit `api/**/*.js` and `api/**/*.ts` entries, so no Node 24.x upgrade is required while the project targets Node 20.x via `package.json` and Vercel project settings.
-- **API routes return 404**: Ensure routes are under `api/` with file-based endpoints (e.g., `api/users.ts`). Confirm `routes` in `vercel.json` include `{ "src": "/api/(.*)", "dest": "/api/$1" }` so API requests bypass the static frontend.
-- **Vite assets not loading in production**: Verify `client` build output folder matches `distDir` (`dist`). If using a custom base path, set `base` in `vite.config.ts` accordingly.
-- **Environment variables missing in preview**: Add Preview-scope values in Vercel settings. Client vars must be prefixed with `VITE_`; serverless vars are read via `process.env`.
-- **Mismatch between local and Vercel Node version**: Align local Node version with Vercel runtime (Node 20.x). Set `engines.node` in `package.json` if needed and match it in Vercel Project Settings → General → Node.js Version; otherwise Vercel will honor `engines` and ignore the project setting. This repo pins Node 20.x to match a Vercel project set to 20.x—keep both in sync to avoid warnings.
-- **Unexpected rebuilds or missing lockfile**: Commit `package-lock.json`/`pnpm-lock.yaml` to keep installs reproducible across previews and production builds.
-- **`npm install` fails with ERESOLVE on Vercel**: Ensure the Node.js version matches what the lockfile was created with (see above). If peer conflicts persist (e.g., React 19 with libraries that still declare React 18 peers), use the `installCommand` above with `--legacy-peer-deps` or fix peer ranges locally and regenerate the lockfile. Keep the Vercel install command in sync with how you install locally.
-- **Multiple variants share a repo**: If you spin up separate Vercel projects (e.g., "app-enterprise" and "app-standard"), ensure each has its own domain, environment variables, and `vercel.json` overrides as needed. Keep build outputs distinct by using the project’s Root Directory setting.
+- **Vercel build error "Function Runtimes must have a valid version"**: Ensure runtime strings are explicit (`nodejs20.x`) for JS and TS handlers. Both `vercel.json` files pin Node 20.x.
+- **API routes return 404**: Confirm Express routes live under `api/` and that the Vercel routes array includes `{ "src": "/api/(.*)", "dest": "/api/$1" }` so requests bypass the SPA.
+- **Vite assets not loading in production**: Ensure the Vite build emits to `dist/public` (default). If you change `outDir` in `vite.config.ts`, update `outputDirectory` and the catch-all route.
+- **Environment variables missing in preview**: Add Preview-scope values in each Vercel project. Remember the `VITE_`/`NEXT_PUBLIC_` prefixes for browser exposure.
+- **Mismatch between local and Vercel Node version**: Keep Node 20.x locally, in `package.json` `engines`, and in Vercel Project Settings. Vercel honors `engines` over the project Node setting.
+- **Peer dependency conflicts**: If installs fail (e.g., React 19 peers), keep using `--legacy-peer-deps` or align peer ranges and regenerate the lockfile per project.
 
 ## 6. Optional CI/CD Guardrails (GitHub Actions)
-Use Vercel for deployment and add a minimal CI workflow to keep previews and production healthy.
+Use Vercel for deployments and add a minimal CI workflow to keep previews and production healthy.
 
-### Workflow file (`.github/workflows/ci.yml`)
 ```yaml
 name: CI
 
@@ -105,26 +131,18 @@ jobs:
           npm ci
           npm run build
 ```
-
-### How it integrates with Vercel
-- Connect the repo to Vercel with GitHub App integration. Set the project Root Directory to `/`.
-- In Vercel Project Settings → Git, mark the **CI** workflow as a required status check for `main`. Vercel waits for required checks before promoting a deployment.
-- When a PR opens, GitHub Actions runs `CI` and Vercel builds a Preview. If tests fail, the status check blocks merge; if tests pass, merging to `main` triggers Vercel Production deployment.
-
-### Secrets and env handling in CI
-- Add any needed secrets (e.g., private registry tokens) to GitHub repo secrets; keep application secrets in Vercel envs. Tests that need runtime secrets should use GitHub **Actions secrets**, while browser-exposed vars must still be prefixed with `VITE_` and injected via `.env` files or Vercel env scopes.
-
-## Quick Start for New Contributors
-1. Fork/clone, run `npm install` at root.
-2. Create feature branch, develop locally with `npm run dev:client` (frontend) and `npm run dev` (Express API).
-3. Open a PR: Vercel posts a preview URL. Test there with Preview env vars.
-4. Merge to `main`: Vercel automatically promotes to production with Production env vars.
+Integration tips:
+- In Vercel Project Settings → Git, mark the CI workflow as a required status check if you want deploys gated on tests.
+- Each Vercel project (root and `next/`) will still build previews; required checks must pass before production promotion.
+- Keep secrets that CI needs in GitHub Actions secrets; app secrets stay in Vercel envs.
 
 ## 7. Dependency Layout: Shared vs. Separate `package.json`
-- **Keep a shared root `package.json`** when you only deploy the Express + Vite stack. It keeps install times shorter, avoids duplicated tools (linters, test runners), and matches the `vercel.json` here which assumes root-level scripts.
-- **Split dependencies per app (recommended when Vite and Next variants coexist)**:
-  - Use npm workspaces (or pnpm/yarn workspaces) with `package.json` files under `client/` (Vite) and `next/` (Next) so each can pin its own React and framework versions without peer conflicts.
-  - Keep a minimal root `package.json` for shared dev tooling and the workspace definition; commit a single top-level lockfile.
-  - In Vercel, create separate projects per variant and set each project’s **Root Directory** to the matching workspace. Use per-project `installCommand`/`buildCommand` so Vercel installs only that workspace’s deps.
-  - Pros: fewer peer conflicts (e.g., React 19 in Vite vs React 18 in Next), smaller install/build surface per deployment, clearer ownership of framework-specific deps.
-  - Trade-off: duplicated scripts between apps and the need to keep workspace metadata aligned (e.g., `npm install --workspaces`), but it’s usually worth it once two frameworks ship side by side.
+- **Express + Vite**: Uses the root `package.json` and lockfile. Only Vite/Express/server deps live here (Next.js is removed to avoid cross-framework conflicts).
+- **Next.js**: Lives entirely in `next/package.json` with its own lockfile and Vercel project rooted at `next/`.
+- **Why split**: Avoids peer conflicts (React 19 + Vite vs. Next.js), keeps installs smaller per deployment, and lets each framework evolve at its own pace.
+- **Workspace option**: If you want a single lockfile, you can add npm workspaces that include `.` and `next/`, but keep framework-specific deps inside their respective `package.json` files.
+
+## Quick Start for New Contributors
+1. Install root deps and run `npm run dev:client` (Vite) plus `npm run dev` (Express). For the Next.js variant, `cd next && npm install` then `npm run dev`.
+2. Open a PR: Vercel posts preview URLs for both projects. Test with Preview env vars.
+3. Merge to `main`: Vercel automatically promotes both projects to production with their own Production env vars.

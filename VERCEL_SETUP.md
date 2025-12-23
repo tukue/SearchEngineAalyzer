@@ -1,52 +1,58 @@
 # Vercel Deployment Setup
 
 ## Required Secrets in GitHub
-
 Add these secrets to your GitHub repository settings:
 
-### 1. Get Vercel Token
+1) **Get Vercel Token**
 ```bash
 npx vercel login
 npx vercel --token
 ```
 
-### 2. Get Project IDs
+2) **Get Project IDs** (run in each project root: repo root for Express+Vite, `next/` for Next.js)
 ```bash
 npx vercel link
 cat .vercel/project.json
 ```
 
-### 3. Add GitHub Secrets
+3) **Add GitHub Secrets**
 Go to: `Settings > Secrets and variables > Actions`
 
 Add:
 - `VERCEL_TOKEN` - Your Vercel token
 - `VERCEL_ORG_ID` - Your organization ID
-- `VERCEL_PROJECT_ID` - Your project ID
+- `VERCEL_PROJECT_ID` - Project ID for the Express + Vite deployment
+- `VERCEL_PROJECT_ID_NEXT` - Project ID for the Next.js deployment (if using the Next variant)
 
 ## Environment variables
-- `API_BASE_URL` - API origin used by the Express functions; set under `Project Settings > Environment Variables` in the Vercel dashboard (or via `.vercel/env.*`).
-- Any client-exposed variables must be prefixed with `VITE_` (e.g., `VITE_API_BASE_URL`). Server-only secrets are read via `process.env` in `api/` handlers.
+- Express + Vite: `API_BASE_URL` and other server secrets via `process.env`; client vars prefixed with `VITE_`.
+- Next.js: use `NEXT_PUBLIC_*` for browser-exposed values; server vars stay unprefixed and are read via `process.env` in route handlers.
+- Configure Preview and Production scopes separately in each Vercel project.
 
 ## Verification checklist (local + Vercel)
-- Node version: **20.x** (Vercel inherits this from the repo root `package.json` and the Project Settings Node version should match; the build error `Function Runtimes must have a valid version` appears if runtimes are not set to `nodejs20.x` for both `api/**/*.js` and `api/**/*.ts` handlers).
-- Install step: `npm install --legacy-peer-deps` at the repo root (matches the Vercel `installCommand`).
-- Build step: `npm run build` (runs the Vite build and emits `dist/public`).
-- Expected output path: `dist/public`.
-- If a clean-room check is needed, run locally: `rm -rf node_modules && npm install --legacy-peer-deps && npm run build`.
+- Node version: **20.x** everywhere. Vercel honors `engines.node` in `package.json`; keep Project Settings Node at 20.x to avoid warnings.
+- Install step: `npm install --legacy-peer-deps` at the repo root for Express + Vite, and `npm install --legacy-peer-deps` inside `next/` for the Next.js project.
+- Build step: `npm run build` (root) and `(cd next && npm run build)`.
+- Outputs: `dist/public` for Vite; `.next` handled automatically by Vercel.
+- Clean-room check: `rm -rf node_modules && npm install --legacy-peer-deps && npm run build` (repeat inside `next/`).
 
 ## Manual Deployment
 ```bash
+# Express + Vite
+npx vercel --prod
+
+# Next.js (from the next/ directory)
+cd next
 npx vercel --prod
 ```
 
 ## Status
-- ✅ Vercel configuration fixed
+- ✅ Vercel configuration split for Express/Vite vs Next.js
 - ✅ Source code protection added
 - ✅ CI/CD pipeline updated
-- ⏳ Secrets need to be configured
+- ⏳ Secrets need to be configured per project
 
 ## Next Steps
 1. Configure GitHub secrets
-2. Trigger CI/CD pipeline
-3. Verify deployment at Vercel URL
+2. Link both Vercel projects (`vercel link` in root and `next/`)
+3. Trigger CI/CD pipelines and verify preview + production URLs for both apps
