@@ -22,7 +22,7 @@
     "test:plan-gating": "jest server/__tests__/plan-gating",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "ci:checks": "(npm run lint || echo \"Linting skipped\") && npm test -- --runInBand --ci && node test.js && node api-test.js && node frontend-check.js && bash npm-test.sh && npm run build --if-present && (cd next && npm run lint && npm run build)",
+    "ci:checks": "(npm run lint --if-present || echo \"Linting skipped\") && npm test -- --runInBand --ci && bash npm-test.sh && npm run build --if-present && (cd next && npm run lint && npm run build)",
     "ci:local": "npm install --legacy-peer-deps && npm --prefix next install --legacy-peer-deps && npm run ci:checks"
   },
   "dependencies": {

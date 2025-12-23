@@ -12,6 +12,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Verify .nvmrc is present
+      run: |
+        test -f .nvmrc
+        echo "Using Node version from .nvmrc: $(cat .nvmrc)"
+
     - name: Use Node.js from .nvmrc
       uses: actions/setup-node@v4
       with:
@@ -20,6 +25,9 @@ jobs:
         cache-dependency-path: |
           package-lock.json
           next/package-lock.json
+
+    - name: Verify Node version
+      run: node --version
 
     - name: Install dependencies (root + next)
       run: |
