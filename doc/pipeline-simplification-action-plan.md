@@ -1,31 +1,25 @@
 # CI/CD Simplification Action Plan
 
-This plan focuses on reducing friction in the GitHub Actions + Vercel pipeline while keeping production deployments safe. It builds on `doc/pipeline-simplification.md` and `docs/ci-cd.md`.
+This plan keeps improvements bite-sized so we can ship them incrementally while maintaining safe GitHub Actions + Vercel deployments. It builds on `doc/pipeline-simplification.md` and `docs/ci-cd.md`.
 
 ## Objectives
 - Shrink feedback time for PRs by eliminating redundant work and clarifying required checks.
 - Keep deployments predictable with minimal, well-documented configuration.
 - Make local reproduction of CI straightforward for contributors.
 
-## Immediate Changes (1–2 days)
-1. **Unify install step**
-   - Set a single install command (`npm install --legacy-peer-deps && npm --prefix next install`) for both CI and Vercel.
-   - Document this as the canonical install in `docs/ci-cd.md` and the workflow.
-2. **Lean CI workflow**
-   - Consolidate the GitHub Actions job to run: lint → targeted tests (`node test.js`, `node api-test.js`, `node frontend-check.js`, `bash npm-test.sh`) → root build → Next.js lint/build.
-   - Cache npm based on `package-lock.json`; drop any unused steps or matrices.
-3. **Standardize Node version**
-   - Pin Node 20 in `.nvmrc` and ensure the workflow uses the same version to avoid drift.
-4. **Env var sanity checks**
-   - Add a pre-build script that validates required env vars for backend and Next during CI and fails fast with a clear message.
-
-## Short-Term Improvements (1–2 sprints)
-1. **Preview parity smoke test**
-   - After Vercel preview deploys, run a lightweight health check (e.g., ping key routes) via a GitHub Actions job using the Vercel preview URL.
-2. **Reusable commands**
-   - Add a `make ci` (or `npm run ci:local`) that chains the CI steps so contributors can reproduce checks locally.
-3. **Clear artifacts & logs**
-   - Ensure Vercel build logs are linked in PR comments; document rollback steps in `docs/ci-cd.md`.
+## Step-by-step plan (small, incremental)
+1. **Pin the runtime** (quick win)
+   - Add `.nvmrc` with Node 20 and update the GitHub Actions workflow to use Node 20. This removes “works on my machine” drift.
+2. **Single install recipe** (reduces churn)
+   - Adopt one command for all contexts: `npm install --legacy-peer-deps && npm --prefix next install`. Add it to the workflow, Vercel settings, and `docs/ci-cd.md`.
+3. **Lean CI job** (fast feedback)
+   - In `.github/workflows/ci.yml`, run only: lint (or skip message), `node test.js`, `node api-test.js`, `node frontend-check.js`, `bash npm-test.sh`, root build, then Next lint/build. Enable npm cache keyed by `package-lock.json`.
+4. **Env var guardrail** (prevents broken previews)
+   - Add a small script that fails CI early when required env vars are missing for backend or Next builds. Reference it from the workflow before builds.
+5. **Preview smoke ping** (safety net)
+   - After Vercel posts a Preview URL, run a light health check (e.g., `curl` a key route) and surface failures in PR checks.
+6. **One-button local CI** (developer ergonomics)
+   - Add `npm run ci:local` (or `make ci`) that chains the CI commands so contributors can reproduce failures.
 
 ## Backlog (nice-to-have)
 - **Nightly dependency scan**: run `npm audit --production` and surface issues without blocking feature builds.
