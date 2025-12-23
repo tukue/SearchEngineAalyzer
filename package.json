@@ -8,22 +8,19 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx server/index.ts",
-    "build": "npm --prefix next run build",
-    "vercel-build": "npm --prefix next run build",
-    "vercel-dev": "npm --prefix next run dev",
-    "postinstall": "npm --prefix next install",
+    "dev:client": "vite",
+    "build": "vite build",
+    "vercel-build": "npm run build",
+    "vercel-dev": "npm run dev",
     "start": "node dist/index.js",
-    "next:dev": "next dev next",
-    "next:build": "next build next",
-    "next:start": "next start next",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "test": "jest",
     "test:plan-gating": "jest server/__tests__/plan-gating",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "ci:checks": "(npm run lint || echo \"Linting skipped\") && node test.js && node api-test.js && node frontend-check.js && bash npm-test.sh && npm run build --if-present && (cd next && npm run lint && npm run build)",
-    "ci:local": "npm install --legacy-peer-deps && npm --prefix next install --legacy-peer-deps && npm run ci:checks"
+    "ci:checks": "(npm run lint || echo \"Linting skipped\") && node test.js && node api-test.js && node frontend-check.js && bash npm-test.sh && npm run build --if-present",
+    "ci:local": "npm install --legacy-peer-deps && npm run ci:checks"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
