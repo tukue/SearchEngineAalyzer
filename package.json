@@ -21,7 +21,8 @@
     "test": "jest",
     "test:plan-gating": "jest server/__tests__/plan-gating",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "ci:local": "npm install --legacy-peer-deps && npm --prefix next install --legacy-peer-deps && (npm run lint || echo \"Linting skipped\") && node test.js && node api-test.js && node frontend-check.js && bash npm-test.sh && npm run build --if-present && (cd next && npm run lint && npm run build)"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

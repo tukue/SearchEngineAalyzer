@@ -20,16 +20,16 @@ This repository contains a Node/TypeScript backend at the root and a Next.js fro
 
 ## CI Pipeline (GitHub Actions)
 - **Workflow file:** `.github/workflows/ci.yml`.
-- **Node & package manager:** Node.js 20.x using npm (lockfile present). The workflow caches npm based on `package-lock.json`.
+- **Node & package manager:** Node.js 20 (pinned in `.nvmrc` and `package.json`) using npm with caching for both `package-lock.json` files.
 - **Checks that run:**
-  - Install dependencies with `npm install --legacy-peer-deps` (helps resolve peer conflicts).
+  - Install dependencies with `npm install --legacy-peer-deps` and `npm --prefix next install --legacy-peer-deps` (same recipe everywhere).
   - Backend lint (if configured) via `npm run lint || echo "Linting skipped"`.
   - Structure/API/frontend sanity checks: `node test.js`, `node api-test.js`, `node frontend-check.js`, and `bash npm-test.sh`.
   - Root build: `npm run build --if-present`.
   - Next.js lint/build from `/next`: `npm run lint` and `npm run build` (working directory `next`).
 - **Run the same checks locally:**
   ```bash
-  npm install --legacy-peer-deps
+  npm install --legacy-peer-deps && npm --prefix next install --legacy-peer-deps
   npm run lint || echo "Linting skipped"
   node test.js && node api-test.js && node frontend-check.js
   bash npm-test.sh
@@ -50,17 +50,10 @@ This repository contains a Node/TypeScript backend at the root and a Next.js fro
   - View build/runtime logs in Vercel → Deployments. Promote or roll back by selecting a previous deployment and clicking **Promote to Production**.
 
 ## Local Developer Workflow
-- **Install dependencies:** `npm install --legacy-peer-deps && npm --prefix next install`.
+- **Install dependencies:** `npm install --legacy-peer-deps && npm --prefix next install --legacy-peer-deps`.
 - **Run backend in dev:** `npm run dev` (Node/Express via `tsx server/index.ts`).
 - **Run frontend in dev:** In another terminal: `(cd next && npm run dev)`.
-- **Full validation (CI equivalent):**
-  ```bash
-  npm install --legacy-peer-deps && npm --prefix next install
-  npm run lint || echo "Linting skipped"
-  node test.js && node api-test.js && node frontend-check.js
-  bash npm-test.sh
-  npm run build --if-present && (cd next && npm run lint && npm run build)
-  ```
+- **Full validation (CI equivalent):** run the `ci:local` script: `npm run ci:local`.
 
 ## Common Issues & Fixes
 - **npm ERESOLVE / peer dependency conflicts:** Use the same flag as CI: `npm install --legacy-peer-deps`. Ensure `package-lock.json` is up to date.
@@ -70,7 +63,7 @@ This repository contains a Node/TypeScript backend at the root and a Next.js fro
 
 ## Minimal Checklist
 - [ ] GitHub Actions workflow passes on PRs and `main`.
-- [ ] Vercel project Root Directory set to `.` with correct install/build/output commands.
+- [x] Vercel project Root Directory set to `.` with correct install/build/output commands (mirrors `vercel.json`).
 - [ ] Preview env vars set (target: Preview); Production env vars set (target: Production).
 - [ ] Preview Deployment appears on each PR and links in the PR checks.
 - [ ] Production deployment succeeds after merging to `main`.
@@ -80,7 +73,7 @@ This repository contains a Node/TypeScript backend at the root and a Next.js fro
 - Install deps: `npm install --legacy-peer-deps && npm --prefix next install`.
 - Run backend: `npm run dev`.
 - Run frontend: `(cd next && npm run dev)`.
-- Run full CI checks locally (see block above).
+- Run full CI checks locally: `npm run ci:local`.
 - Push branch → GitHub Actions runs checks → Vercel preview link appears.
 - Merge to `main` → Production deployment on Vercel.
 - Use Vercel Deployments page to view logs and promote/rollback.
