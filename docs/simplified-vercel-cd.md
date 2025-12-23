@@ -121,8 +121,6 @@ jobs:
       - run: npm run lint --if-present
       - run: npm test --if-present
       - run: |
-          cd client
-          npm ci
           npm run build
 ```
 Integration tips:
