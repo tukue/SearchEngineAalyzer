@@ -23,18 +23,11 @@ This repository contains a Node/TypeScript backend at the root and a Next.js fro
 - **Node & package manager:** Node.js 20 (pinned in `.nvmrc` and `package.json`) using npm with caching for both `package-lock.json` files.
 - **Checks that run:**
   - Install dependencies with `npm install --legacy-peer-deps` and `npm --prefix next install --legacy-peer-deps` (same recipe everywhere).
-  - Backend lint (if configured) via `npm run lint || echo "Linting skipped"`.
-  - Structure/API/frontend sanity checks: `node test.js`, `node api-test.js`, `node frontend-check.js`, and `bash npm-test.sh`.
-  - Root build: `npm run build --if-present`.
-  - Next.js lint/build from `/next`: `npm run lint` and `npm run build` (working directory `next`).
+  - Run `npm run ci:checks` to execute lint (or skip), structure/API/frontend sanity checks, root build, and Next.js lint/build.
 - **Run the same checks locally:**
   ```bash
   npm install --legacy-peer-deps && npm --prefix next install --legacy-peer-deps
-  npm run lint || echo "Linting skipped"
-  node test.js && node api-test.js && node frontend-check.js
-  bash npm-test.sh
-  npm run build --if-present
-  (cd next && npm run lint && npm run build)
+  npm run ci:checks
   ```
 
 ## CD Pipeline (Vercel)
@@ -53,7 +46,7 @@ This repository contains a Node/TypeScript backend at the root and a Next.js fro
 - **Install dependencies:** `npm install --legacy-peer-deps && npm --prefix next install --legacy-peer-deps`.
 - **Run backend in dev:** `npm run dev` (Node/Express via `tsx server/index.ts`).
 - **Run frontend in dev:** In another terminal: `(cd next && npm run dev)`.
-- **Full validation (CI equivalent):** run the `ci:local` script: `npm run ci:local`.
+- **Full validation (CI equivalent):** run `npm run ci:local` (installs deps + runs `ci:checks`).
 
 ## Common Issues & Fixes
 - **npm ERESOLVE / peer dependency conflicts:** Use the same flag as CI: `npm install --legacy-peer-deps`. Ensure `package-lock.json` is up to date.
