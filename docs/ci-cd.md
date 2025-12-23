@@ -33,7 +33,7 @@ This repository contains a Node/TypeScript backend at the root and a Next.js fro
 ## CD Pipeline (Vercel)
 - **Project settings (Vercel → Settings → General):**
   - Root Directory: repository root (`.`).
-  - Install Command: `npm install && npm --prefix next install`.
+  - Install Command: `npm install --legacy-peer-deps && npm --prefix next install`.
   - Build Command: `npm run build` (runs `npm --prefix next run build`).
   - Output Directory: `next/.next`.
 - **Triggers:**
