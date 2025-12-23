@@ -4,8 +4,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
   "functions": {
-    "api/**/*.ts": { "runtime": "nodejs20.x" },
-    "api/**/*.js": { "runtime": "nodejs20.x" }
+    "api/**/*.{js,ts}": { "runtime": "nodejs20.x" }
   },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
