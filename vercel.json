@@ -1,12 +1,16 @@
 {
   "version": 2,
-  "installCommand": "npm install && npm --prefix next install",
+  "installCommand": "npm install --legacy-peer-deps",
   "buildCommand": "npm run build",
-  "outputDirectory": "next/.next",
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "next/$1"
+  "outputDirectory": "dist/public",
+  "functions": {
+    "api/**/*.{js,ts}": {
+      "runtime": "nodejs20.x"
     }
+  },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
