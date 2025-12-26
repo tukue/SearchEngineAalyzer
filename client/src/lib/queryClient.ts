@@ -26,6 +26,15 @@ function resolveApiToken(): string {
     return fromImportMeta;
   }
 
+  const isDev =
+    typeof import.meta !== "undefined"
+      ? Boolean((import.meta as { env?: { DEV?: boolean } }).env?.DEV)
+      : process.env.NODE_ENV !== "production";
+
+  if (isDev) {
+    return "dev-token";
+  }
+
   throw new Error("NEXT_PUBLIC_API_TOKEN (or VITE_API_TOKEN) environment variable is required");
 }
 

@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "tsx server/index.ts",
     "dev:client": "vite",
+    "dev:next": "npm --prefix next run dev",
     "build": "vite build",
     "vercel-build": "npm run build",
     "vercel-dev": "npm run dev",
