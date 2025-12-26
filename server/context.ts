@@ -68,6 +68,15 @@ function loadConfiguredTokens(): TokenConfig[] {
         role: (process.env.API_USER_ROLE as TenantRole) || "owner",
         label: "test-default",
       });
+    } else if (process.env.NODE_ENV !== "production") {
+      const devToken = process.env.API_DEV_TOKEN || "dev-token";
+      tokenConfigs.push({
+        token: devToken,
+        tenantId: Number(process.env.API_TENANT_ID || 1),
+        userId: process.env.API_USER_ID || "dev-user",
+        role: (process.env.API_USER_ROLE as TenantRole) || "owner",
+        label: "dev-default",
+      });
     } else {
       throw new Error("API_AUTH_TOKEN or API_AUTH_TOKENS environment variable is required");
     }
