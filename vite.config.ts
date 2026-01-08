@@ -7,6 +7,8 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const devPort = Number(process.env.VITE_DEV_PORT ?? 5173);
+const apiProxyTarget = process.env.VITE_API_PROXY_TARGET ?? "http://localhost:5000";
 
 export default defineConfig({
   plugins: [
@@ -33,5 +35,15 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+  },
+  server: {
+    port: devPort,
+    strictPort: true,
+    proxy: {
+      "/api": {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
+    },
   },
 });
