@@ -68,7 +68,7 @@ function loadConfiguredTokens(): TokenConfig[] {
         role: (process.env.API_USER_ROLE as TenantRole) || "owner",
         label: "test-default",
       });
-    } else {
+    } else if (process.env.NODE_ENV !== "development") {
       throw new Error("API_AUTH_TOKEN or API_AUTH_TOKENS environment variable is required");
     }
   }
@@ -126,6 +126,10 @@ async function resolveTenantContext(token: string, requestedRole?: string | null
 }
 
 export async function requireAuthContext(req: Request, res: Response, next: NextFunction) {
+  if (process.env.NODE_ENV === "development" && tokenLookup.size === 0) {
+    return next();
+  }
+
   const token = extractToken(req);
   if (!token) {
     return res.status(401).json({ message: "Authentication required" });
