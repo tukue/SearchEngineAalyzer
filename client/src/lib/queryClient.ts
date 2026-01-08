@@ -7,7 +7,7 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-function resolveApiToken(): string {
+function resolveApiToken(): string | undefined {
   const fromProcess =
     typeof process !== "undefined"
       ? process.env.NEXT_PUBLIC_API_TOKEN ?? process.env.VITE_API_TOKEN
@@ -26,14 +26,19 @@ function resolveApiToken(): string {
     return fromImportMeta;
   }
 
-  throw new Error("NEXT_PUBLIC_API_TOKEN (or VITE_API_TOKEN) environment variable is required");
+  return undefined;
 }
 
-const defaultTenantHeaders: Record<string, string> = {
-  get Authorization() {
-    return `Bearer ${resolveApiToken()}`;
-  },
-};
+function buildTenantHeaders(): Record<string, string> {
+  const token = resolveApiToken();
+  if (!token) {
+    return {};
+  }
+
+  return {
+    Authorization: `Bearer ${token}`,
+  };
+}
 
 export async function apiRequest(
   method: string,
@@ -43,7 +48,7 @@ export async function apiRequest(
   const res = await fetch(url, {
     method,
     headers: {
-      ...defaultTenantHeaders,
+      ...buildTenantHeaders(),
       ...(data ? { "Content-Type": "application/json" } : {}),
     },
     body: data ? JSON.stringify(data) : undefined,
@@ -61,7 +66,7 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const res = await fetch(queryKey[0] as string, {
-      headers: defaultTenantHeaders,
+      headers: buildTenantHeaders(),
       credentials: "include",
     });
 
