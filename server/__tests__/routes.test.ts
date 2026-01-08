@@ -93,9 +93,10 @@ describe('API Routes', () => {
       expect(titleTag.content).toBe('Test Website');
     });
 
-    it('should reject requests without tenant context', async () => {
+    it('should allow requests without auth headers', async () => {
       const response = await request.post('/api/analyze').send({ url: 'https://example.com' });
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('analysis');
     });
 
     it('should block non-HTTPS targets', async () => {

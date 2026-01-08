@@ -7,39 +7,6 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-function resolveApiToken(): string | undefined {
-  const fromProcess =
-    typeof process !== "undefined"
-      ? process.env.NEXT_PUBLIC_API_TOKEN ?? process.env.VITE_API_TOKEN
-      : undefined;
-
-  if (fromProcess) {
-    return fromProcess;
-  }
-
-  const fromImportMeta =
-    typeof import.meta !== "undefined"
-      ? (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_API_TOKEN
-      : undefined;
-
-  if (fromImportMeta) {
-    return fromImportMeta;
-  }
-
-  return undefined;
-}
-
-function buildTenantHeaders(): Record<string, string> {
-  const token = resolveApiToken();
-  if (!token) {
-    return {};
-  }
-
-  return {
-    Authorization: `Bearer ${token}`,
-  };
-}
-
 export async function apiRequest(
   method: string,
   url: string,
@@ -48,7 +15,6 @@ export async function apiRequest(
   const res = await fetch(url, {
     method,
     headers: {
-      ...buildTenantHeaders(),
       ...(data ? { "Content-Type": "application/json" } : {}),
     },
     body: data ? JSON.stringify(data) : undefined,
@@ -66,7 +32,6 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const res = await fetch(queryKey[0] as string, {
-      headers: buildTenantHeaders(),
       credentials: "include",
     });
 
