@@ -5,6 +5,7 @@ import { z } from "zod";
 import { formatZodError } from "@shared/validation";
 import { urlSchema, type AnalysisResult, type MetaTag, type Recommendation } from "@shared/schema";
 import { storage } from "@server/storage";
+import { isNextEndpointEnabled, isNextFrameworkEnabled } from "../feature-flags";
 
 const importantSeoTags = ["title", "description", "keywords", "viewport", "canonical"];
 const importantSocialTags = [
@@ -20,20 +21,7 @@ const importantSocialTags = [
 ];
 const importantTechnicalTags = ["robots", "charset", "content-type", "language", "author", "generator"];
 
-const migratedEndpoints = process.env.NEXT_MIGRATED_API_ENDPOINTS
-  ?.split(",")
-  .map((item) => item.trim().toLowerCase())
-  .filter(Boolean);
-
 const ANALYZE_ENDPOINT_NAME = "analyze";
-
-function isNextEndpointEnabled(endpoint: string) {
-  if (!migratedEndpoints || migratedEndpoints.length === 0) {
-    return true;
-  }
-
-  return migratedEndpoints.includes(endpoint.toLowerCase());
-}
 
 type MetaTagEntry = {
   name?: string | null;
@@ -142,6 +130,13 @@ function buildRecommendations(tag: string): { tagName: string; description: stri
 }
 
 export async function POST(req: NextRequest) {
+  if (!isNextFrameworkEnabled()) {
+    return NextResponse.json(
+      { message: "Next.js handlers disabled via NEXT_FRAMEWORK_ENABLED" },
+      { status: 503 }
+    );
+  }
+
   if (!isNextEndpointEnabled(ANALYZE_ENDPOINT_NAME)) {
     return NextResponse.json(
       { message: "Next.js analyze handler disabled via NEXT_MIGRATED_API_ENDPOINTS" },

@@ -32,6 +32,7 @@ jest.mock('@server/storage', () => ({
 
 const loadAnalyzeHandler = async () => {
   jest.resetModules();
+  process.env.NEXT_FRAMEWORK_ENABLED = 'true';
   process.env.NEXT_MIGRATED_API_ENDPOINTS = 'analyze';
   const module = await import('../../next/app/api/analyze/route');
   return module.POST;
@@ -48,6 +49,7 @@ const buildRequest = (body: unknown, init: Partial<NextRequestInit> = {}) =>
 describe('Next.js analyze API handler', () => {
   afterEach(() => {
     jest.restoreAllMocks();
+    delete process.env.NEXT_FRAMEWORK_ENABLED;
     delete process.env.NEXT_MIGRATED_API_ENDPOINTS;
   });
 
