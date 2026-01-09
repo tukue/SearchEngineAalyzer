@@ -27,15 +27,12 @@ jobs:
           cache: 'npm'
           cache-dependency-path: |
             package-lock.json
-            next/package-lock.json
 
       - name: Verify Node version
         run: node --version
 
-      - name: Install dependencies (root + next)
-        run: |
-          npm install --legacy-peer-deps
-          npm --prefix next install --legacy-peer-deps
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
 
       - name: Lint
         run: npm run lint
@@ -59,7 +56,6 @@ jobs:
           cache: 'npm'
           cache-dependency-path: |
             package-lock.json
-            next/package-lock.json
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
