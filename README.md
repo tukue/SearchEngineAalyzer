@@ -54,17 +54,10 @@ npm ci --ignore-scripts --registry=https://registry.npmjs.org
 
 The repository includes a `.npmrc` that uses `NPM_TOKEN` automatically so CI systems can inject credentials without modifying commands.
 
-## Next.js API migration
+## Next.js API migration (paused)
 
-- The analyze API is now implemented under `next/app/api/analyze/route.ts`, reusing the existing meta-tag analysis logic and shared storage. This handler mirrors `POST /api/analyze` so traffic can be routed to the Next.js runtime once parity is confirmed.
-- Use `NEXT_MIGRATED_API_ENDPOINTS` (comma-separated, case-insensitive) to control which handlers run via Next.js. By default Next.js serves every migrated endpoint; omit an endpoint from the list to fall back to the Express implementation in `server/routes.ts` during the transition.
-- The health check now also runs at `next/app/api/health/route.ts` behind the same migration flag so probes can target the Next.js runtime without bypassing the toggle list.
-- A beta `/analyze` page in the app router exercises the migrated handler end-to-end, showing loading/error states and the returned health score so parity checks can happen in the Next.js UI.
-- Additional Express routes (plan, quota, history, export) should be migrated incrementally to `app/api/<route>/route.ts` and added to `NEXT_MIGRATED_API_ENDPOINTS` before fully retiring the Express server. When migrating the search history feature, list its endpoints in `NEXT_MIGRATED_API_ENDPOINTS` so they stay on the Next.js runtime.
-- Running `npm run build` at the repo root now invokes the Next workspace (`next/package.json`), so `rm -rf next/.next && npm run build` mirrors Vercel's pipeline and ensures the Next-only stack is what's deployed.
+The Next.js migration is currently paused. The active runtime is Vite + Express only, so focus on the `client/` frontend and `server/` API for now. The `next/` workspace remains in the repository for future work, but it is not part of the active build/deploy flow.
 
 ## Deployment
 
-- Vercel now builds the Next.js app (`next/package.json`) directly by targeting the `next` directory (see `vercel.json`), so deploying to Vercel triggers `npm run build` from that folder and serves the new `app` router.
-- Before pointing production traffic to Vercel's Next.js deployment, confirm parity on each API route and include them in `NEXT_MIGRATED_API_ENDPOINTS`. Leaving the list empty keeps every migrated endpoint on Next.js; remove an entry (e.g., `plan`) to fall back to the Express server while the rest continue to run in Next.js.
-- After parity is confirmed and all needed endpoints run on Next.js, remove the Express service from the Vercel deployment, keep the `NEXT_MIGRATED_API_ENDPOINTS` env listing all endpoints, and rely on the `next/app/api` handlers for both UI and API traffic.
+- Deploy the Vite build output (`dist/public`) with the Express API running from `server/index.ts`.
