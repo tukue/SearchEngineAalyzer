@@ -30,9 +30,13 @@ jest.mock('@server/storage', () => ({
   }
 }));
 
-const loadAnalyzeHandler = async () => {
+const loadAnalyzeHandler = async (options: { frameworkEnabled?: boolean } = {}) => {
   jest.resetModules();
-  process.env.NEXT_FRAMEWORK_ENABLED = 'true';
+  if (options.frameworkEnabled === false) {
+    delete process.env.NEXT_FRAMEWORK_ENABLED;
+  } else {
+    process.env.NEXT_FRAMEWORK_ENABLED = 'true';
+  }
   process.env.NEXT_MIGRATED_API_ENDPOINTS = 'analyze';
   const module = await import('../../next/app/api/analyze/route');
   return module.POST;
@@ -115,5 +119,14 @@ describe('Next.js analyze API handler', () => {
     const body = await response.json();
     expect(body.message.toLowerCase()).toContain('validation error');
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns a 503 when the framework flag is disabled', async () => {
+    const handler = await loadAnalyzeHandler({ frameworkEnabled: false });
+    const response = await handler(buildRequest({ url: 'https://example.com' }));
+
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body.message).toContain('NEXT_FRAMEWORK_ENABLED');
   });
 });

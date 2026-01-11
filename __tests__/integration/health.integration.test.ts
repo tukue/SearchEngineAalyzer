@@ -66,4 +66,15 @@ describe('Next.js health route', () => {
     const body = await res.json();
     expect(body.message).toContain('disabled');
   });
+
+  it('returns a 503 when the framework flag is disabled', async () => {
+    delete process.env.NEXT_FRAMEWORK_ENABLED;
+    process.env.NEXT_MIGRATED_API_ENDPOINTS = 'health';
+
+    const res = await healthHandler(createRequest());
+
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.message).toContain('NEXT_FRAMEWORK_ENABLED');
+  });
 });
