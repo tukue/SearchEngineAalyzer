@@ -119,5 +119,9 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
+  },
+  "volta": {
+    "node": "20.16.0",
+    "npm": "10.8.1"
   }
 }
