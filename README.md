@@ -51,6 +51,15 @@ npm ci --ignore-scripts --registry=https://registry.npmjs.org
 
 The repository includes a `.npmrc` that uses `NPM_TOKEN` automatically so CI systems can inject credentials without modifying commands.
 
+## Local Setup
+
+```bash
+npm ci
+npm run dev
+```
+
+The API and frontend share the same port (`http://localhost:5000`).
+
 ## Running locally
 
 Start the API + frontend together:
@@ -67,3 +76,8 @@ The API and frontend share the same port (`http://localhost:5000`).
 npm run build
 npm run start
 ```
+
+## Troubleshooting
+
+- **Node version mismatch**: The project requires Node 20.x. Use `nvm use` (with the provided `.nvmrc`) if you see an `EBADENGINE` warning.
+- **Registry access errors**: Ensure your network allows access to `https://registry.npmjs.org/` and retry `npm ci` if you encounter 403 errors.
