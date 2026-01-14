@@ -20,7 +20,8 @@ const config = {
         tsconfig: 'tsconfig.jest.json'
       }
     ]
-  }
+  },
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js']
 };
 
 module.exports = config;

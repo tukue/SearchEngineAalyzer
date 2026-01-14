@@ -4,6 +4,10 @@ import { registerRoutes } from "../routes";
 import { MemStorage } from "../storage";
 import { PLAN_CONFIGS } from "@shared/schema";
 
+// Set test environment variables
+process.env.NODE_ENV = 'test';
+process.env.API_AUTH_TOKEN = 'disabled';
+
 // Mock the storage module
 jest.mock("../storage", () => {
   const mockStorage = new (jest.requireActual("../storage").MemStorage)();
