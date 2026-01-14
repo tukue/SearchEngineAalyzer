@@ -55,7 +55,7 @@ The repository includes a `.npmrc` that uses `NPM_TOKEN` automatically so CI sys
 
 ```bash
 nvm use
-npm ci
+npm install
 npm run dev
 ```
 
@@ -82,4 +82,4 @@ npm run start
 
 - **Node version mismatch**: The project requires Node 20.x. Use `nvm use` (with the provided `.nvmrc`) if you see an `EBADENGINE` warning.
 - **Volta users**: `volta pin node@20.16.0 npm@10.8.1` to match the project defaults.
-- **Registry access errors**: Ensure your network allows access to `https://registry.npmjs.org/` and retry `npm ci` if you encounter 403 errors.
+- **Registry access errors**: Ensure your network allows access to `https://registry.npmjs.org/` and retry `npm install` if you encounter 403 errors.
