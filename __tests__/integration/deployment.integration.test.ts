@@ -28,9 +28,17 @@ describe('Vercel deployment API integration', () => {
         for await (const chunk of req) {
           body += chunk;
         }
-        try {
-          body = JSON.parse(body);
-        } catch {
+        if (body) {
+          try {
+            body = JSON.parse(body);
+          } catch (error) {
+            // Return 400 for invalid JSON instead of silently defaulting to empty object
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ message: 'Invalid JSON in request body' }));
+            return;
+          }
+        } else {
           body = {};
         }
       }

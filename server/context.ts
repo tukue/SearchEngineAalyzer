@@ -139,15 +139,16 @@ export async function requireAuthContext(req: Request, res: Response, next: Next
   if (process.env.API_AUTH_TOKEN === 'disabled') {
     // Create a default test tenant context
     const tenant = await storage.getTenant(1);
-    if (tenant) {
-      req.tenantContext = {
-        tenantId: tenant.id,
-        plan: tenant.plan as AuthenticatedTenantContext["plan"],
-        userId: "test-user",
-        role: "owner",
-        tokenLabel: "test-disabled",
-      };
+    if (!tenant) {
+      return res.status(500).json({ message: "Test tenant not found" });
     }
+    req.tenantContext = {
+      tenantId: tenant.id,
+      plan: tenant.plan as AuthenticatedTenantContext["plan"],
+      userId: "test-user",
+      role: "owner",
+      tokenLabel: "test-disabled",
+    };
     return next();
   }
 
