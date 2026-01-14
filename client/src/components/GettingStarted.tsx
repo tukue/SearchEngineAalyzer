@@ -5,9 +5,9 @@ export default function GettingStarted() {
     <div className="bg-white rounded-lg shadow-md p-8">
       <div className="text-center max-w-xl mx-auto">
         <Monitor className="h-16 w-16 text-primary mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">Analyze Your Website's Meta Tags</h2>
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">Analyze Your Website</h2>
         <p className="text-slate-600 mb-6">
-          Enter your website URL above to analyze its meta tags and get recommendations for improvements.
+          Enter a website URL to scan meta tags and receive prioritized recommendations for improvements.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
           <div className="p-4 bg-slate-50 rounded-lg">
