@@ -19,8 +19,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware to add tenant context (simplified for MVP - uses default tenant)
   apiRouter.use(async (req, res, next) => {
     try {
-      // Skip tenant context setup if authentication is disabled
-      if (process.env.API_AUTH_TOKEN === 'disabled') {
+      // Skip tenant context setup if authentication is disabled in test environment
+      if (process.env.API_AUTH_TOKEN === 'disabled' && process.env.NODE_ENV === 'test') {
         return next();
       }
       

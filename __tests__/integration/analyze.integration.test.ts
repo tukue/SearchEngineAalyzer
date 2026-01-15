@@ -19,14 +19,15 @@ const dnsMock = dns as DnsMock;
 const createServer = () =>
   http.createServer(async (req, res) => {
     // Parse request body for POST requests
-    let body = '';
+    let bodyText = '';
+    let body: any = undefined;
     if (req.method === 'POST') {
       for await (const chunk of req) {
-        body += chunk;
+        bodyText += chunk;
       }
-      if (body) {
+      if (bodyText) {
         try {
-          body = JSON.parse(body);
+          body = JSON.parse(bodyText);
         } catch (error) {
           // Return 400 for invalid JSON instead of silently defaulting to empty object
           res.statusCode = 400;
