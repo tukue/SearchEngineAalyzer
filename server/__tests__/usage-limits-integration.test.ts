@@ -29,8 +29,12 @@ describe("Usage Limits Integration", () => {
     app = express();
     app.use(express.json());
     
-    // Get the mocked storage instance
+    // Get the mocked storage instance and reset it
     mockStorage = require("../storage").storage;
+    
+    // Clear all usage data before each test
+    mockStorage['usageLedger'] = new Map();
+    mockStorage['monthlyUsage'] = new Map();
     
     server = await registerRoutes(app);
   });
