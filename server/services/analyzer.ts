@@ -126,7 +126,12 @@ export async function analyzeUrl(normalizedUrl: string, options?: { tenantId?: n
 
   const tagExists = (tagName: string) => {
     return foundMetaTags.some(
-      (tag) => tag.name === tagName || tag.property === tagName || (tag.name === "title" && tagName === "title"),
+      (tag) => 
+        tag.name === tagName || 
+        tag.property === tagName || 
+        (tag.name === "title" && tagName === "title") ||
+        (tag.rel === tagName) ||
+        (tagName === "charset" && tag.charset)
     );
   };
 
@@ -257,13 +262,28 @@ export async function analyzeUrl(normalizedUrl: string, options?: { tenantId?: n
     }
   });
 
-  const totalImportantTags =
-    importantSeoTags.length +
-    importantSocialTags.filter((t) => ["og:title", "og:description", "og:image", "twitter:card"].includes(t)).length +
-    importantTechnicalTags.filter((t) => ["robots", "charset"].includes(t)).length;
-
-  const presentImportantTags = totalImportantTags - missingCount;
-  const healthScore = Math.round((presentImportantTags / totalImportantTags) * 100);
+  // Calculate health score (robust algorithm)
+  const scoreTags = [
+    ...importantSeoTags,
+    'og:title', 'og:description', 'og:image', 'twitter:card',
+    'robots', 'charset'
+  ];
+  
+  let presentScoreTags = 0;
+  scoreTags.forEach(tagName => {
+    // Find the tag in foundMetaTags and check isPresent
+    const tag = foundMetaTags.find(t => 
+      (t.name === tagName || t.property === tagName || 
+      (t.name === 'title' && tagName === 'title') ||
+      (t.rel === tagName) ||
+      (tagName === 'charset' && t.charset))
+    );
+    if (tag && tag.isPresent) {
+      presentScoreTags++;
+    }
+  });
+  
+  const healthScore = Math.round((presentScoreTags / scoreTags.length) * 100);
   const totalTags = foundMetaTags.length;
 
   const tenantId = options?.tenantId ?? (() => {

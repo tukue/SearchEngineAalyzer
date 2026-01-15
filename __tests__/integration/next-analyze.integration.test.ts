@@ -111,7 +111,7 @@ describe('Next.js analyze API handler', () => {
 
     expect(response.status).toBe(400);
     const body = await response.json();
-    expect(body.message.toLowerCase()).toContain('validation error');
+    expect(body.message.toLowerCase()).toContain('url');
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

@@ -16,7 +16,7 @@ Provide project context and coding guidelines that AI should follow when generat
 - **TypeScript & Full-stack alignment:** Prefer explicit typings, shared models, and layered services/controllers so that frontend and backend stay consistent and testable.
 
 ## Guidance for AI
-- When generating code, prefer small, pure, testable modules and include tests along with implementation.
+- When generating code, prefer small, clean testable modules and include tests along with implementation.
 - Run the test suite and ensure the project builds successfully after making changes; if tests or the build fail, fix them or add/update tests and CI.
 - When proposing architectural changes, include migration steps, rationale, and tests.
 - If adding or modifying behavior, update tests and documentation in the same change whenever possible.

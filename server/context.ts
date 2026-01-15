@@ -25,6 +25,11 @@ function loadConfiguredTokens(): TokenConfig[] {
     return tokenConfigs;
   }
 
+  // Skip token loading if authentication is disabled (only for test environment)
+  if (process.env.API_AUTH_TOKEN === 'disabled' && process.env.NODE_ENV === 'test') {
+    return tokenConfigs;
+  }
+
   const configuredList = process.env.API_AUTH_TOKENS;
   if (configuredList) {
     try {
@@ -77,8 +82,12 @@ function loadConfiguredTokens(): TokenConfig[] {
 }
 
 const tokenLookup = new Map<string, TokenConfig>();
-for (const token of loadConfiguredTokens()) {
-  tokenLookup.set(token.token, token);
+
+// Only initialize token lookup if authentication is not disabled in test environment
+if (process.env.API_AUTH_TOKEN !== 'disabled' || process.env.NODE_ENV !== 'test') {
+  for (const token of loadConfiguredTokens()) {
+    tokenLookup.set(token.token, token);
+  }
 }
 
 function extractToken(req: Request): string | null {
@@ -126,6 +135,23 @@ async function resolveTenantContext(token: string, requestedRole?: string | null
 }
 
 export async function requireAuthContext(req: Request, res: Response, next: NextFunction) {
+  // Skip authentication if API_AUTH_TOKEN is set to 'disabled' for testing
+  if (process.env.API_AUTH_TOKEN === 'disabled' && process.env.NODE_ENV === 'test') {
+    // Create a default test tenant context
+    const tenant = await storage.getTenant(1);
+    if (!tenant) {
+      return res.status(500).json({ message: "Test tenant not found" });
+    }
+    req.tenantContext = {
+      tenantId: tenant.id,
+      plan: tenant.plan as AuthenticatedTenantContext["plan"],
+      userId: "test-user",
+      role: "owner",
+      tokenLabel: "test-disabled",
+    };
+    return next();
+  }
+
   const token = extractToken(req);
   if (!token) {
     return res.status(401).json({ message: "Authentication required" });

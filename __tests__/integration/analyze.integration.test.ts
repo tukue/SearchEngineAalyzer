@@ -1,22 +1,69 @@
 import http from 'http';
 import request from 'supertest';
-import type { IncomingMessage, Server, ServerResponse } from 'http';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { Server } from 'http';
 import handler from '../../api/index';
 import fetch from 'node-fetch';
+import dns from 'dns/promises';
 
+// Mock node-fetch
 type FetchMock = typeof fetch & jest.MockedFunction<typeof fetch>;
-
 jest.mock('node-fetch', () => ({ __esModule: true, default: jest.fn() }));
-
 const fetchMock = fetch as FetchMock;
 
+// Mock dns/promises
+type DnsMock = typeof dns & jest.Mocked<typeof dns>;
+jest.mock('dns/promises');
+const dnsMock = dns as DnsMock;
+
 const createServer = () =>
-  http.createServer((req, res) => {
-    const vercelReq = Object.assign(req, { query: {}, body: undefined }) as IncomingMessage & {
-      query: Record<string, string>;
-      body: unknown;
-    };
-    const vercelRes = res as ServerResponse;
+  http.createServer(async (req, res) => {
+    // Parse request body for POST requests
+    let bodyText = '';
+    let body: any = undefined;
+    if (req.method === 'POST') {
+      for await (const chunk of req) {
+        bodyText += chunk;
+      }
+      if (bodyText) {
+        try {
+          body = JSON.parse(bodyText);
+        } catch (error) {
+          // Return 400 for invalid JSON instead of silently defaulting to empty object
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message: 'Invalid JSON in request body' }));
+          return;
+        }
+      } else {
+        body = {};
+      }
+    }
+
+    // Create Vercel-compatible request/response objects
+    const vercelReq = Object.assign(req, {
+      query: {},
+      body: body || undefined,
+      url: req.url
+    }) as VercelRequest;
+
+    const originalEnd = res.end.bind(res);
+    const vercelRes = Object.assign(res, {
+      status: (code: number) => {
+        res.statusCode = code;
+        return vercelRes;
+      },
+      json: (data: any) => {
+        res.setHeader('Content-Type', 'application/json');
+        originalEnd(JSON.stringify(data));
+        return vercelRes;
+      },
+      end: (data?: any) => {
+        originalEnd(data);
+        return vercelRes;
+      }
+    }) as VercelResponse;
+
     return handler(vercelReq, vercelRes);
   });
 
@@ -25,6 +72,9 @@ describe('Analyze endpoint integration', () => {
 
   beforeEach(() => {
     fetchMock.mockReset();
+    dnsMock.lookup.mockReset();
+    // Default DNS lookup to succeed for a generic IP
+    dnsMock.lookup.mockResolvedValue([{ address: '1.2.3.4', family: 4 }]);
     server = createServer();
   });
 
@@ -62,6 +112,8 @@ describe('Analyze endpoint integration', () => {
   });
 
   it('returns a 400 when the remote site cannot be reached', async () => {
+    // Ensure DNS lookup succeeds so fetchMock is hit
+    dnsMock.lookup.mockResolvedValue([{ address: '1.2.3.4', family: 4 }]);
     fetchMock.mockRejectedValue(new Error('connect ETIMEDOUT'));
 
     const res = await request(server)
@@ -104,7 +156,7 @@ describe('Analyze endpoint integration', () => {
     expect(res.body.recommendations.length).toBeGreaterThan(0);
     expect(res.body.recommendations).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ tagName: expect.stringMatching(/description|title|canonical/) })
+        expect.objectContaining({ tagName: expect.stringMatching(/description|canonical/) })
       ])
     );
   });

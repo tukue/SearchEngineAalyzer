@@ -1,6 +1,6 @@
 import http from 'http';
 import request from 'supertest';
-import type { IncomingMessage, ServerResponse } from 'http';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import handler from '../../api/index';
 import fetch from 'node-fetch';
 
@@ -21,12 +21,53 @@ describe('Vercel deployment API integration', () => {
   });
 
   const createServer = () =>
-    http.createServer((req, res) => {
-      const vercelReq = Object.assign(req, { query: {}, body: undefined }) as IncomingMessage & {
-        query: Record<string, string>;
-        body: unknown;
-      };
-      const vercelRes = res as ServerResponse;
+    http.createServer(async (req, res) => {
+      // Parse request body for POST requests
+      let bodyText = '';
+      let body: any = undefined;
+      if (req.method === 'POST') {
+        for await (const chunk of req) {
+          bodyText += chunk;
+        }
+        if (bodyText) {
+          try {
+            body = JSON.parse(bodyText);
+          } catch (error) {
+            // Return 400 for invalid JSON instead of silently defaulting to empty object
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ message: 'Invalid JSON in request body' }));
+            return;
+          }
+        } else {
+          body = {};
+        }
+      }
+
+      // Create Vercel-compatible request/response objects
+      const vercelReq = Object.assign(req, {
+        query: {},
+        body: body || undefined,
+        url: req.url
+      }) as VercelRequest;
+
+      const originalEnd = res.end.bind(res);
+      const vercelRes = Object.assign(res, {
+        status: (code: number) => {
+          res.statusCode = code;
+          return vercelRes;
+        },
+        json: (data: any) => {
+          res.setHeader('Content-Type', 'application/json');
+          originalEnd(JSON.stringify(data));
+          return vercelRes;
+        },
+        end: (data?: any) => {
+          originalEnd(data);
+          return vercelRes;
+        }
+      }) as VercelResponse;
+
       return handler(vercelReq, vercelRes);
     });
 

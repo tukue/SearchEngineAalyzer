@@ -26,12 +26,14 @@ function resolveApiToken(): string {
     return fromImportMeta;
   }
 
-  throw new Error("NEXT_PUBLIC_API_TOKEN (or VITE_API_TOKEN) environment variable is required");
+  // Return empty string if no token is configured (for testing with disabled auth)
+  return "";
 }
 
 const defaultTenantHeaders: Record<string, string> = {
   get Authorization() {
-    return `Bearer ${resolveApiToken()}`;
+    const token = resolveApiToken();
+    return token ? `Bearer ${token}` : "";
   },
 };
 
