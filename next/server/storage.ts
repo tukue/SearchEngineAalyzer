@@ -45,6 +45,7 @@ export class MemStorage implements IStorage {
       const metaTagId = this.currentMetaTagId++;
       return {
         id: metaTagId,
+        tenantId: analysis.tenantId,
         url: analysis.url,
         name: tag.name || null,
         property: tag.property || null,

@@ -1,12 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, getDefaultTenantContext } from "./storage";
 import { requireEntitlement, PlanGatingService } from "./plan-gating";
 import { checkAndReserveQuota, addQuotaToResponse, UsageLimitsService } from "./usage-limits";
 import express from "express";
 import { urlSchema, AuditRequest, PLAN_CONFIGS, TenantContext } from "@shared/schema";
 import { z } from "zod";
-import { fromZodError } from "zod-validation-error";
+import { formatZodError } from "@shared/validation";
 import { fetchWithNetworkLimits, validatePublicHttpsUrl, createHttpError } from "./url-safety";
 import * as cheerio from "cheerio";
 import { requireAuthContext } from "./context";
@@ -442,10 +442,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (failError) {
         console.error("Error marking audit as failed:", failError);
       }
-      
+
       if (error instanceof z.ZodError) {
-        const validationError = fromZodError(error);
-        return res.status(400).json({ message: validationError.message || "Invalid request format" });
+        const validationError = formatZodError(error);
+        return res.status(400).json({ message: validationError || "Invalid request format" });
       }
 
       if ((error as any).status) {

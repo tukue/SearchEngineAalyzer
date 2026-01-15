@@ -24,6 +24,7 @@ Authentication is required for write APIs. Set the following variables when runn
 - **API_AUTH_TOKEN** (server): required bearer token value accepted by the API. Example: `API_AUTH_TOKEN=dev-token-123`.
 - **VITE_API_TOKEN** (client): token the frontend sends in the `Authorization` header. This must match `API_AUTH_TOKEN` (or an entry in `API_AUTH_TOKENS` if using multiple tokens).
 - **API_BASE_URL** (Next.js): base URL for rewrites to the API; defaults to `http://localhost:5000` and only needs to be set when proxying to a hosted backend.
+- **NEXT_MIGRATED_API_ENDPOINTS** (Next.js): optional comma-separated list limiting which migrated handlers stay on Next.js. Leave empty to run all migrated endpoints there; include `history` (and other features) when their routes move to `app/api`.
 
 For automated tests, `TEST_API_TOKEN` can be set; otherwise a `test-token` default is used while `NODE_ENV=test`.
 
@@ -59,7 +60,7 @@ The repository includes a `.npmrc` that uses `NPM_TOKEN` automatically so CI sys
 - Use `NEXT_MIGRATED_API_ENDPOINTS` (comma-separated, case-insensitive) to control which handlers run via Next.js. By default Next.js serves every migrated endpoint; omit an endpoint from the list to fall back to the Express implementation in `server/routes.ts` during the transition.
 - The health check now also runs at `next/app/api/health/route.ts` behind the same migration flag so probes can target the Next.js runtime without bypassing the toggle list.
 - A beta `/analyze` page in the app router exercises the migrated handler end-to-end, showing loading/error states and the returned health score so parity checks can happen in the Next.js UI.
-- Additional Express routes (plan, quota, history, export) should be migrated incrementally to `app/api/<route>/route.ts` and added to `NEXT_MIGRATED_API_ENDPOINTS` before fully retiring the Express server.
+- Additional Express routes (plan, quota, history, export) should be migrated incrementally to `app/api/<route>/route.ts` and added to `NEXT_MIGRATED_API_ENDPOINTS` before fully retiring the Express server. When migrating the search history feature, list its endpoints in `NEXT_MIGRATED_API_ENDPOINTS` so they stay on the Next.js runtime.
 - Running `npm run build` at the repo root now invokes the Next workspace (`next/package.json`), so `rm -rf next/.next && npm run build` mirrors Vercel's pipeline and ensures the Next-only stack is what's deployed.
 
 ## Deployment

@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { storage, getDefaultTenantContext } from '../server/storage';
 import { urlSchema } from '../shared/schema';
 import { z } from 'zod';
-import { fromZodError } from 'zod-validation-error';
+import { formatZodError } from '@shared/validation';
 import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
 
@@ -186,8 +186,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json(storedAnalysis);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const validationError = fromZodError(error);
-        return res.status(400).json({ message: validationError.message || 'Invalid URL format' });
+        const validationError = formatZodError(error);
+        return res.status(400).json({ message: validationError || 'Invalid URL format' });
       }
       console.error('Error analyzing website:', error);
       return res.status(500).json({ message: 'Failed to analyze website' });
