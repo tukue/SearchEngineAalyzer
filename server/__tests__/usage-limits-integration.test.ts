@@ -3,6 +3,7 @@ import express, { Express } from "express";
 import { registerRoutes } from "../routes";
 import { MemStorage } from "../storage";
 import { PLAN_CONFIGS } from "@shared/schema";
+import dns from 'dns/promises';
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
@@ -20,6 +21,11 @@ jest.mock("../storage", () => {
   };
 });
 
+// Mock dns/promises
+type DnsMock = typeof dns & jest.Mocked<typeof dns>;
+jest.mock('dns/promises');
+const dnsMock = dns as DnsMock;
+
 describe("Usage Limits Integration", () => {
   let app: Express;
   let server: any;
@@ -35,6 +41,9 @@ describe("Usage Limits Integration", () => {
     // Clear all usage data before each test
     mockStorage['usageLedger'] = new Map();
     mockStorage['monthlyUsage'] = new Map();
+
+    // Default DNS lookup to succeed
+    dnsMock.lookup.mockResolvedValue([{ address: '1.2.3.4', family: 4 }]);
     
     server = await registerRoutes(app);
   });
@@ -167,18 +176,18 @@ describe("Usage Limits Integration", () => {
       const eightyPercent = Math.floor(limit * 0.8);
       const ninetyPercent = Math.floor(limit * 0.9);
 
-      // Fill to 80%
-      for (let i = 0; i < eightyPercent; i++) {
+      // Fill to just before 80%
+      for (let i = 0; i < eightyPercent - 1; i++) {
         await request(app)
           .post("/api/analyze")
           .send({
             url: "https://example.com",
-            requestId: `req-80-${i}`
+            requestId: `req-fill-${i}`
           })
           .expect(200);
       }
 
-      // Check 80% warning
+      // The request that hits 80%
       const response80 = await request(app)
         .post("/api/analyze")
         .send({
@@ -186,22 +195,22 @@ describe("Usage Limits Integration", () => {
           requestId: "check-80"
         })
         .expect(200);
-
+      
       expect(response80.body.quota.warningLevel).toBe("warning_80");
 
-      // Fill to 90%
-      const remaining = ninetyPercent - eightyPercent - 1; // -1 for the check-80 request
-      for (let i = 0; i < remaining; i++) {
+      // Fill to just before 90%
+      const remainingTo90 = ninetyPercent - eightyPercent;
+      for (let i = 0; i < remainingTo90 - 1; i++) {
         await request(app)
           .post("/api/analyze")
           .send({
             url: "https://example.com",
-            requestId: `req-90-${i}`
+            requestId: `req-fill-90-${i}`
           })
           .expect(200);
       }
 
-      // Check 90% warning
+      // The request that hits 90%
       const response90 = await request(app)
         .post("/api/analyze")
         .send({
@@ -240,6 +249,8 @@ describe("Usage Limits Integration", () => {
   describe("Error handling", () => {
     it("should mark failed audits correctly", async () => {
       // Mock a network error by using an invalid URL that will cause fetch to fail
+      dnsMock.lookup.mockRejectedValue(new Error('getaddrinfo ENOTFOUND'));
+
       const response = await request(app)
         .post("/api/analyze")
         .send({
@@ -248,7 +259,7 @@ describe("Usage Limits Integration", () => {
         })
         .expect(400);
 
-      expect(response.body.message).toContain("Failed to connect");
+      expect(response.body.message).toContain("Could not resolve the target host");
       
       // Verify the audit was marked as failed in the ledger
       const ledgerEntry = await mockStorage.getUsageLedgerEntry(1, "fail-test");

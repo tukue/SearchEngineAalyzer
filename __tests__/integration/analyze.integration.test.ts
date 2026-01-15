@@ -4,12 +4,17 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { Server } from 'http';
 import handler from '../../api/index';
 import fetch from 'node-fetch';
+import dns from 'dns/promises';
 
+// Mock node-fetch
 type FetchMock = typeof fetch & jest.MockedFunction<typeof fetch>;
-
 jest.mock('node-fetch', () => ({ __esModule: true, default: jest.fn() }));
-
 const fetchMock = fetch as FetchMock;
+
+// Mock dns/promises
+type DnsMock = typeof dns & jest.Mocked<typeof dns>;
+jest.mock('dns/promises');
+const dnsMock = dns as DnsMock;
 
 const createServer = () =>
   http.createServer(async (req, res) => {
@@ -66,6 +71,9 @@ describe('Analyze endpoint integration', () => {
 
   beforeEach(() => {
     fetchMock.mockReset();
+    dnsMock.lookup.mockReset();
+    // Default DNS lookup to succeed for a generic IP
+    dnsMock.lookup.mockResolvedValue([{ address: '1.2.3.4', family: 4 }]);
     server = createServer();
   });
 
@@ -103,6 +111,8 @@ describe('Analyze endpoint integration', () => {
   });
 
   it('returns a 400 when the remote site cannot be reached', async () => {
+    // Ensure DNS lookup succeeds so fetchMock is hit
+    dnsMock.lookup.mockResolvedValue([{ address: '1.2.3.4', family: 4 }]);
     fetchMock.mockRejectedValue(new Error('connect ETIMEDOUT'));
 
     const res = await request(server)
@@ -145,7 +155,7 @@ describe('Analyze endpoint integration', () => {
     expect(res.body.recommendations.length).toBeGreaterThan(0);
     expect(res.body.recommendations).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ tagName: expect.stringMatching(/description|title|canonical/) })
+        expect.objectContaining({ tagName: expect.stringMatching(/description|canonical/) })
       ])
     );
   });
