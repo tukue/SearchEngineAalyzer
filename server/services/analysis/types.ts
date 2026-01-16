@@ -4,6 +4,10 @@ export interface AnalyzerOptions {
   tenantId?: number;
   userId?: string;
   auditType?: string;
+  timeoutMs?: number;
+  maxBytes?: number;
+  retries?: number;
+  retryDelayMs?: number;
 }
 
 export interface TagResult extends Partial<MetaTag> {

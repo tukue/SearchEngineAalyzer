@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { createAudit, fetchAuditStatus } from "@/lib/apiClient";
 import { useToast } from "@/hooks/use-toast";
 import { HistoryIcon, RefreshCw, ExternalLink, Download, Crown } from "lucide-react";
 import URLInputForm from "@/components/URLInputForm";
@@ -35,6 +36,9 @@ export default function Home() {
   const [showResults, setShowResults] = useState(false);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const [activeTab, setActiveTab] = useState("analyzer");
+  const [auditId, setAuditId] = useState<string | null>(null);
+  const [auditStatus, setAuditStatus] = useState<"idle" | "processing" | "completed" | "failed">("idle");
+  const [auditError, setAuditError] = useState<string | null>(null);
   const { toast } = useToast();
   const { planInfo, loading: planLoading } = usePlanInfo();
   const { error: planError, handleError, ErrorComponent } = usePlanGatingErrorHandler();
@@ -47,6 +51,29 @@ export default function Home() {
     } else {
       fallbackHandler(err);
     }
+  };
+
+  const handleSuccessfulAudit = (data: AnalysisResult) => {
+    setAnalysisResults(data);
+    setShowResults(true);
+    setAuditError(null);
+    setAuditStatus("completed");
+
+    const newHistoryItem = {
+      url: data.analysis.url,
+      timestamp: new Date().toISOString(),
+    };
+
+    const updatedHistory = [newHistoryItem, ...searchHistory.filter(item => item.url !== data.analysis.url)]
+      .slice(0, 10);
+
+    setSearchHistory(updatedHistory);
+    localStorage.setItem('metaTagAnalyzerHistory', JSON.stringify(updatedHistory));
+
+    toast({
+      title: "Analysis Complete",
+      description: `Successfully analyzed meta tags for ${data.analysis.url}`,
+    });
   };
 
   // Load search history from localStorage when component mounts
@@ -75,34 +102,27 @@ export default function Home() {
 
   const { mutate, isPending, isError, error, reset } = useMutation({
     mutationFn: async (url: string) => {
-      const res = await apiRequest("POST", "/api/analyze", { url });
-      return res.json();
+      const response = await createAudit({ url });
+
+      if (response.status === "completed" && response.result) {
+        return response.result;
+      }
+
+      setAuditId(response.auditId);
+      setAuditStatus("processing");
+      return null;
     },
-    onSuccess: (data: AnalysisResult) => {
-      setAnalysisResults(data);
-      setShowResults(true);
-      
-      // Add to search history
-      const newHistoryItem = {
-        url: data.analysis.url,
-        timestamp: new Date().toISOString(),
-      };
-      
-      // Update history - keep only the 10 most recent searches
-      const updatedHistory = [newHistoryItem, ...searchHistory.filter(item => item.url !== data.analysis.url)]
-        .slice(0, 10);
-      
-      setSearchHistory(updatedHistory);
-      
-      // Save to localStorage
-      localStorage.setItem('metaTagAnalyzerHistory', JSON.stringify(updatedHistory));
-      
-      toast({
-        title: "Analysis Complete",
-        description: `Successfully analyzed meta tags for ${data.analysis.url}`,
-      });
+    onSuccess: (data: AnalysisResult | null) => {
+      if (data) {
+        setAuditStatus("completed");
+        setAnalysisResults(data);
+        setShowResults(true);
+        handleSuccessfulAudit(data);
+      }
     },
     onError: (err: any) => {
+      setAuditStatus("failed");
+      setAuditError(err?.message || "An unexpected error occurred");
       handlePlanGatingError(err, (err) => {
         toast({
           variant: "destructive",
@@ -115,6 +135,9 @@ export default function Home() {
 
   const handleSubmit = (url: string) => {
     setShowResults(false);
+    setAuditId(null);
+    setAuditStatus("processing");
+    setAuditError(null);
     mutate(url);
   };
   
@@ -149,6 +172,8 @@ export default function Home() {
 
   const handleRetry = () => {
     reset();
+    setAuditStatus("idle");
+    setAuditError(null);
   };
   
   const handleHistoryItemClick = (url: string) => {
@@ -171,7 +196,45 @@ export default function Home() {
       ' at ' + date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   };
 
-  const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+  const errorMessage = error instanceof Error ? error.message : auditError || "An unexpected error occurred";
+
+  useEffect(() => {
+    if (!auditId || auditStatus !== "processing") {
+      return;
+    }
+
+    let cancelled = false;
+    const pollAudit = async () => {
+      try {
+        const response = await fetchAuditStatus(auditId);
+        if (cancelled) return;
+
+        if (response.status === "completed" && response.result) {
+          setAuditStatus("completed");
+          handleSuccessfulAudit(response.result);
+          return;
+        }
+
+        if (response.status === "failed") {
+          setAuditStatus("failed");
+          setAuditError(response.error?.message || "Audit failed");
+          return;
+        }
+
+        setTimeout(pollAudit, 1500);
+      } catch (pollError: any) {
+        if (cancelled) return;
+        setAuditStatus("failed");
+        setAuditError(pollError?.message || "Audit failed");
+      }
+    };
+
+    const timeout = setTimeout(pollAudit, 1500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [auditId, auditStatus]);
 
   return (
     <>
@@ -256,10 +319,14 @@ export default function Home() {
             <URLInputForm onSubmit={handleSubmit} isLoading={isPending} />
 
             {/* Loading State */}
-            <LoadingState isVisible={isPending} />
+            <LoadingState isVisible={isPending || auditStatus === "processing"} />
 
             {/* Error State */}
-            <ErrorState isVisible={isError} errorMessage={errorMessage} onRetry={handleRetry} />
+            <ErrorState
+              isVisible={isError || auditStatus === "failed"}
+              errorMessage={errorMessage}
+              onRetry={handleRetry}
+            />
 
             {/* Results Container with Export */}
             {showResults && analysisResults && (
@@ -302,7 +369,7 @@ export default function Home() {
             )}
 
             {/* Getting Started (Shown when no analysis has been run) */}
-            {!isPending && !isError && !showResults && <GettingStarted />}
+            {!isPending && auditStatus !== "processing" && !isError && !showResults && <GettingStarted />}
           </TabsContent>
           
           <TabsContent value="history" className="space-y-6">

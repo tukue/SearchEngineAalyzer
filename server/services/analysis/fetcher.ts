@@ -9,21 +9,36 @@ export class UrlFetcher {
 
     const parsedUrl = await validatePublicHttpsUrl(url, options?.tenantId ? `tenant=${options.tenantId}` : undefined);
 
-    try {
-      const response = await fetchWithNetworkLimits(parsedUrl.toString(), {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; MetaTagAnalyzer/1.0)",
-        },
-      });
+    const retries = options?.retries ?? 1;
+    const retryDelayMs = options?.retryDelayMs ?? 250;
+    let lastError: unknown;
 
-      if (!response.ok) {
-        throw createHttpError(`Failed to fetch website: ${response.status} ${response.statusText}`);
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      try {
+        const response = await fetchWithNetworkLimits(parsedUrl.toString(), {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; MetaTagAnalyzer/1.0)",
+          },
+          timeoutMs: options?.timeoutMs,
+          maxBytes: options?.maxBytes,
+          logContext: options?.tenantId ? `tenant=${options.tenantId}` : undefined,
+        });
+
+        if (!response.ok) {
+          throw createHttpError(`Failed to fetch website: ${response.status} ${response.statusText}`);
+        }
+
+        return await response.text();
+      } catch (error) {
+        lastError = error;
+        if (attempt < retries) {
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+          continue;
+        }
       }
-
-      return await response.text();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw createHttpError(`Failed to connect to the website: ${message}`);
     }
+
+    const message = lastError instanceof Error ? lastError.message : String(lastError);
+    throw createHttpError(`Failed to connect to the website: ${message}`);
   }
 }

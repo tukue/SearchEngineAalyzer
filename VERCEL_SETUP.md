@@ -25,8 +25,14 @@ Add:
 - `VERCEL_PROJECT_ID` - Your project ID
 
 ## Environment variables
-- `API_BASE_URL` - API origin used by the Express functions; set under `Project Settings > Environment Variables` in the Vercel dashboard (or via `.vercel/env.*`).
-- Any client-exposed variables must be prefixed with `VITE_` (e.g., `VITE_API_BASE_URL`). Server-only secrets are read via `process.env` in `api/` handlers.
+- `API_AUTH_TOKEN` - Required bearer token accepted by serverless APIs unless `API_AUTH_DISABLED=true`.
+- `API_AUTH_TOKENS` - Optional JSON array for multiple tokens (tenantId/userId/role entries).
+- `API_AUTH_DISABLED` - Set to `true` to bypass auth during local testing.
+- `KV_REST_API_URL` - Vercel KV / Upstash Redis REST endpoint (enables persistent audit status + rate limiting).
+- `KV_REST_API_TOKEN` - Vercel KV / Upstash Redis REST token.
+- `RATE_LIMIT_MAX_REQUESTS` - Optional max audits per window (default 15).
+- `RATE_LIMIT_WINDOW_SECONDS` - Optional rate limit window (default 60s).
+- Any client-exposed variables must be prefixed with `VITE_` (e.g., `VITE_API_TOKEN`). Server-only secrets are read via `process.env` in `api/` handlers.
 
 ## Verification checklist (local + Vercel)
 - Node version: **20.x** (Vercel inherits this from the repo root `package.json` and the Project Settings Node version should match; the build error `Function Runtimes must have a valid version` appears if runtimes are not set to `nodejs20.x` for the `api/**/*.{js,ts}` handlers).
