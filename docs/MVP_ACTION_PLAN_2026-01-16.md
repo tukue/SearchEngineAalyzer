@@ -114,7 +114,6 @@ Low–Medium
 
 **MVP-friendly implementation idea**  
 Expose Express error details in the Vite UI and render a short “Try this” list.
-
 ---
 
 ## Suggested Sequencing (2-week MVP window)
