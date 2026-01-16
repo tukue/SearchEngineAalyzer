@@ -20,13 +20,17 @@ type TokenConfig = {
 
 const tokenConfigs: TokenConfig[] = [];
 
+const isAuthDisabled = () =>
+  process.env.API_AUTH_DISABLED === "true" ||
+  process.env.API_AUTH_TOKEN === "disabled";
+
 function loadConfiguredTokens(): TokenConfig[] {
   if (tokenConfigs.length) {
     return tokenConfigs;
   }
 
-  // Skip token loading if authentication is disabled (only for test environment)
-  if (process.env.API_AUTH_TOKEN === 'disabled' && process.env.NODE_ENV === 'test') {
+  // Skip token loading if authentication is disabled (testing)
+  if (isAuthDisabled()) {
     return tokenConfigs;
   }
 
@@ -83,8 +87,8 @@ function loadConfiguredTokens(): TokenConfig[] {
 
 const tokenLookup = new Map<string, TokenConfig>();
 
-// Only initialize token lookup if authentication is not disabled in test environment
-if (process.env.API_AUTH_TOKEN !== 'disabled' || process.env.NODE_ENV !== 'test') {
+// Only initialize token lookup if authentication is not disabled
+if (!isAuthDisabled()) {
   for (const token of loadConfiguredTokens()) {
     tokenLookup.set(token.token, token);
   }
@@ -135,19 +139,19 @@ async function resolveTenantContext(token: string, requestedRole?: string | null
 }
 
 export async function requireAuthContext(req: Request, res: Response, next: NextFunction) {
-  // Skip authentication if API_AUTH_TOKEN is set to 'disabled' for testing
-  if (process.env.API_AUTH_TOKEN === 'disabled' && process.env.NODE_ENV === 'test') {
-    // Create a default test tenant context
+  // Skip authentication if API auth is disabled for testing
+  if (isAuthDisabled()) {
+    // Create a default tenant context
     const tenant = await storage.getTenant(1);
     if (!tenant) {
-      return res.status(500).json({ message: "Test tenant not found" });
+      return res.status(500).json({ message: "Default tenant not found" });
     }
     req.tenantContext = {
       tenantId: tenant.id,
       plan: tenant.plan as AuthenticatedTenantContext["plan"],
-      userId: "test-user",
+      userId: "testing-user",
       role: "owner",
-      tokenLabel: "test-disabled",
+      tokenLabel: "auth-disabled",
     };
     return next();
   }
