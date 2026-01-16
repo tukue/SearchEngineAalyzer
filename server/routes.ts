@@ -15,12 +15,15 @@ import { analyzeUrl } from "./services/analysis";
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   const apiRouter = express.Router();
+  const isAuthDisabled =
+    process.env.API_AUTH_DISABLED === "true" ||
+    process.env.API_AUTH_TOKEN === "disabled";
   
   // Middleware to add tenant context (simplified for MVP - uses default tenant)
   apiRouter.use(async (req, res, next) => {
     try {
-      // Skip tenant context setup if authentication is disabled in test environment
-      if (process.env.API_AUTH_TOKEN === 'disabled' && process.env.NODE_ENV === 'test') {
+      // Skip tenant context setup if authentication is disabled for testing
+      if (isAuthDisabled) {
         return next();
       }
       
