@@ -5,6 +5,9 @@ Meta Tag Analyzer is a web application that analyzes and validates meta tags fro
 ## Features
 
 - **Meta Tag Analysis**: Analyze meta tags from any website and categorize them into SEO, Social, and Technical tags.
+- **Health Summary**: View an overall health score and pass/fail counts for each category at a glance.
+- **Top Issues**: Identify the most critical issues with severity indicators and "quick win" suggestions.
+- **Filtered View**: By default, only missing or invalid tags are shown to reduce noise, with an option to view all tags.
 - **Recommendations**: Get actionable recommendations to improve your meta tags.
 - **Search History**: View and manage your recent analyses.
 - **Responsive Design**: Works seamlessly on both desktop and mobile devices.
