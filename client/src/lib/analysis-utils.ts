@@ -62,11 +62,11 @@ export function computeHealthSummary(tags: MetaTag[]): HealthSummary {
       totalValid++;
     }
 
-    const category = (tag.tagType || "Technical").toLowerCase();
+    const category = tag.tagType || "Technical";
     
-    if (category.includes("seo")) {
+    if (category === "SEO") {
       isValid ? summary.seo.pass++ : summary.seo.fail++;
-    } else if (category.includes("social")) {
+    } else if (category === "Social") {
       isValid ? summary.social.pass++ : summary.social.fail++;
     } else {
       isValid ? summary.technical.pass++ : summary.technical.fail++;
