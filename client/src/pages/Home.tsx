@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { HistoryIcon, RefreshCw, ExternalLink, Download, Crown } from "lucide-react";
@@ -38,6 +38,7 @@ export default function Home() {
   const { toast } = useToast();
   const { planInfo, loading: planLoading } = usePlanInfo();
   const { error: planError, handleError, ErrorComponent } = usePlanGatingErrorHandler();
+  const queryClient = useQueryClient();
 
   // Helper function for handling plan gating errors
   const handlePlanGatingError = (err: any, fallbackHandler: (err: any) => void) => {
@@ -81,6 +82,7 @@ export default function Home() {
     onSuccess: (data: AnalysisResult) => {
       setAnalysisResults(data);
       setShowResults(true);
+      queryClient.invalidateQueries({ queryKey: ["analysis-history"] });
       
       // Add to search history
       const newHistoryItem = {
@@ -172,6 +174,26 @@ export default function Home() {
   };
 
   const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+
+  const previousAnalysis = useMemo(() => {
+    if (!analysisResults || !serverHistory?.analyses?.length) {
+      return null;
+    }
+
+    const matching = serverHistory.analyses
+      .filter((analysis: any) => analysis.url === analysisResults.analysis.url)
+      .slice()
+      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    if (matching.length === 0) return null;
+
+    const currentIndex = matching.findIndex((analysis: any) => analysis.id === analysisResults.analysis.id);
+    if (currentIndex === -1) {
+      return matching[0] ?? null;
+    }
+
+    return matching[currentIndex + 1] ?? null;
+  }, [analysisResults, serverHistory]);
 
   return (
     <>
@@ -297,7 +319,11 @@ export default function Home() {
                     </DropdownMenu>
                   </FeatureGate>
                 </div>
-                <ResultsContainer isVisible={true} results={analysisResults} />
+                <ResultsContainer
+                  isVisible={true}
+                  results={analysisResults}
+                  previousAnalysis={previousAnalysis}
+                />
               </div>
             )}
 

@@ -4,16 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AnalysisResult } from "@shared/schema";
+import { Analysis, AnalysisResult } from "@shared/schema";
 import TagsTable from "./TagsTable";
 import RecommendationsList from "./RecommendationsList";
+import WebsiteAnalyzerReport from "./WebsiteAnalyzerReport";
 
 type ResultsContainerProps = {
   isVisible: boolean;
   results: AnalysisResult | null;
+  previousAnalysis?: Analysis | null;
 };
 
-export default function ResultsContainer({ isVisible, results }: ResultsContainerProps) {
+export default function ResultsContainer({ isVisible, results, previousAnalysis }: ResultsContainerProps) {
   const [activeTab, setActiveTab] = useState("all");
 
   if (!isVisible || !results) return null;
@@ -85,6 +87,7 @@ export default function ResultsContainer({ isVisible, results }: ResultsContaine
 
   return (
     <div>
+      <WebsiteAnalyzerReport result={results} previousAnalysis={previousAnalysis} />
       {/* Summary Card */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
