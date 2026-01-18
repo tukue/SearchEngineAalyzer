@@ -6,12 +6,23 @@ type WebsiteAnalyzerReportProps = {
   previousAnalysis?: Analysis | null;
 };
 
+type AnalysisWithOptionalCounts = Analysis & {
+  invalidCount?: number | null;
+  warningCount?: number | null;
+};
+
 const findTagValue = (tags: MetaTag[], matcher: (tag: MetaTag) => boolean) => {
   const tag = tags.find(matcher);
   if (!tag || !tag.isPresent) return null;
   const content = tag.content ?? "";
   const trimmed = content.trim();
   return trimmed.length > 0 ? trimmed : null;
+};
+
+const getOptionalCount = (analysis: Analysis | null | undefined, key: "invalidCount" | "warningCount") => {
+  if (!analysis) return 0;
+  const value = (analysis as AnalysisWithOptionalCounts)[key];
+  return value ?? 0;
 };
 
 const buildAuditPayload = (result: AnalysisResult, previousAnalysis?: Analysis | null): WebsiteAnalyzerAuditPayload => {
@@ -38,15 +49,15 @@ const buildAuditPayload = (result: AnalysisResult, previousAnalysis?: Analysis |
     },
     currentCounts: {
       missing: analysis.missingCount,
-      invalid: 0,
-      warnings: 0,
+      invalid: getOptionalCount(analysis, "invalidCount"),
+      warnings: getOptionalCount(analysis, "warningCount"),
     },
     previousRun: previousAnalysis
       ? {
           counts: {
             missing: previousAnalysis.missingCount,
-            invalid: 0,
-            warnings: 0,
+            invalid: getOptionalCount(previousAnalysis, "invalidCount"),
+            warnings: getOptionalCount(previousAnalysis, "warningCount"),
           },
         }
       : undefined,
