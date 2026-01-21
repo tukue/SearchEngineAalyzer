@@ -1,6 +1,6 @@
 # Implementation Backlog
 
-Date: 2025-09-27
+Date: 2026-01-21
 
 ## Critical (Blockers)
 1. Implement durable audit queue with job persistence, retry/backoff, DLQ, and worker execution.
