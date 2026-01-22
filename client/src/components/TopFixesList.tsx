@@ -21,10 +21,10 @@ export default function TopFixesList({ fixes }: TopFixesListProps) {
     );
   }
 
-  const getSeverityColor = (severity: string): "default" | "destructive" | "secondary" | "outline" => {
+  const getSeverityColor = (severity: string): "default" | "caution" | "secondary" | "outline" => {
     switch (severity) {
-      case "Critical": return "destructive";
-      case "High": return "destructive"; // Use destructive for high severity
+      case "Critical": return "caution";
+      case "High": return "caution"; // Use caution for high severity
       case "Medium": return "secondary";
       case "Low": return "outline";
       default: return "secondary";

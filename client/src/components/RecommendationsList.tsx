@@ -36,7 +36,7 @@ export default function RecommendationsList({ recommendations }: Recommendations
       },
       (err) => {
         toast({
-          variant: "destructive",
+          variant: "caution",
           title: "Failed to copy code",
           description: "Please try again or copy manually",
           duration: 2000,

@@ -101,7 +101,7 @@ export function QuotaExceededPrompt({ feature, currentPlan, onUpgrade }: {
         </span>
         <Button 
           size="sm" 
-          variant="destructive"
+          variant="caution"
           className="ml-4"
           onClick={onUpgrade}
         >

@@ -112,7 +112,7 @@ export default function Home() {
     onError: (err: any) => {
       handlePlanGatingError(err, (err) => {
         toast({
-          variant: "destructive",
+          variant: "caution",
           title: "Analysis Failed",
           description: err.message || "An unexpected error occurred",
         });
@@ -140,7 +140,7 @@ export default function Home() {
     onError: (err: any) => {
       handlePlanGatingError(err, (err) => {
         toast({
-          variant: "destructive",
+          variant: "caution",
           title: "Export Failed",
           description: err.message || "Failed to export analysis",
         });

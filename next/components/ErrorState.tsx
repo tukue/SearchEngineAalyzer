@@ -22,7 +22,7 @@ export default function ErrorState({ isVisible, errorMessage, onRetry }: ErrorSt
             {errorMessage || "We couldn't access the website. Please check the URL and try again."}
           </p>
           <Button
-            variant="destructive"
+            variant="caution"
             onClick={onRetry}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white"
           >
