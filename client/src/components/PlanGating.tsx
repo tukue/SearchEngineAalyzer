@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -30,7 +30,8 @@ export function usePlanInfo() {
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchPlanInfo = useCallback(() => {
+    setLoading(true);
     fetch('/api/plan')
       .then(res => {
         if (!res.ok) {
@@ -53,7 +54,11 @@ export function usePlanInfo() {
       });
   }, []);
 
-  return { planInfo, loading };
+  useEffect(() => {
+    fetchPlanInfo();
+  }, [fetchPlanInfo]);
+
+  return { planInfo, loading, refetch: fetchPlanInfo };
 }
 
 // Component to show upgrade prompt

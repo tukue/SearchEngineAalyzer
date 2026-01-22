@@ -1,13 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DownloadIcon, Search, MessageSquare, Code, AlertTriangle, BarChart3, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Analysis, AnalysisResult } from "@shared/schema";
 import TagsTable from "./TagsTable";
 import RecommendationsList from "./RecommendationsList";
 import WebsiteAnalyzerReport from "./WebsiteAnalyzerReport";
+import TopFixesList from "./TopFixesList";
+import { HealthSummaryCard } from "./HealthSummaryCard";
+import { computeHealthSummary } from "@/lib/analysis-utils";
 
 type ResultsContainerProps = {
   isVisible: boolean;
@@ -17,61 +22,50 @@ type ResultsContainerProps = {
 
 export default function ResultsContainer({ isVisible, results, previousAnalysis }: ResultsContainerProps) {
   const [activeTab, setActiveTab] = useState("all");
+  const [showAllTags, setShowAllTags] = useState(false);
+
+  const healthSummary = useMemo(() => {
+    if (!results) return null;
+    return computeHealthSummary(results.tags);
+  }, [results]);
 
   if (!isVisible || !results) return null;
 
-  const { analysis, tags, recommendations } = results;
+  const { analysis, tags, recommendations, topFixes } = results;
 
-  // Function to determine the color of the health score
-  const getHealthScoreColor = (score: number) => {
-    if (score >= 90) return "bg-green-500";
-    if (score >= 70) return "bg-green-400";
-    if (score >= 50) return "bg-yellow-500";
-    if (score >= 30) return "bg-orange-500";
-    return "bg-red-500";
-  };
-
-  // Function to determine the health score label
-  const getHealthScoreLabel = (score: number) => {
-    if (score >= 90) return "Excellent";
-    if (score >= 70) return "Good";
-    if (score >= 50) return "Average";
-    if (score >= 30) return "Needs Improvement";
-    return "Poor";
-  };
-  
-  // Function to get badge variant based on score
-  const getScoreBadgeVariant = (score: number) => {
-    if (score >= 70) return "default";
-    if (score >= 50) return "secondary";
-    if (score >= 30) return "outline";
-    return "destructive";
-  };
-
-  const formatRunTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // Function to filter tags based on active tab
+  // Function to filter tags based on active tab and showAllTags toggle
   const getFilteredTags = () => {
+    let filtered = tags;
+
+    // First filter by tab
     switch (activeTab) {
       case "seo":
-        return tags.filter(tag => tag.tagType === "SEO");
+        filtered = tags.filter(tag => tag.tagType === "SEO");
+        break;
       case "social":
-        return tags.filter(tag => tag.tagType === "Social");
+        filtered = tags.filter(tag => tag.tagType === "Social");
+        break;
       case "technical":
-        return tags.filter(tag => tag.tagType === "Technical");
+        filtered = tags.filter(tag => tag.tagType === "Technical");
+        break;
       case "missing":
-        return tags.filter(tag => !tag.isPresent);
+        filtered = tags.filter(tag => !tag.isPresent);
+        break;
       default:
-        return tags;
+        // "all" - no category filter
+        break;
     }
+
+    // Then filter by showAllTags toggle (unless we are in "missing" tab which implies showing issues)
+    if (!showAllTags && activeTab !== "missing") {
+      filtered = filtered.filter(tag => {
+        const isMissing = !tag.isPresent || tag.content === "Missing";
+        const isInvalid = !isMissing && (!tag.content || tag.content.trim() === "");
+        return isMissing || isInvalid;
+      });
+    }
+
+    return filtered;
   };
 
   // Function to handle exporting results as JSON
@@ -86,112 +80,40 @@ export default function ResultsContainer({ isVisible, results, previousAnalysis 
   };
 
   return (
-    <div>
+    <div className="space-y-8">
       <WebsiteAnalyzerReport result={results} previousAnalysis={previousAnalysis} />
-      {/* Summary Card */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-800">Meta Tags Summary</h2>
-            <p className="text-slate-600">{analysis.url}</p>
-          </div>
-          <div className="mt-3 sm:mt-0">
-            <Button
-              variant="outline"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary bg-blue-50 hover:bg-blue-100"
-              onClick={handleExport}
-            >
-              <DownloadIcon className="h-5 w-5 mr-2" />
-              Export Results
-            </Button>
-          </div>
+      
+      {/* Header & Export */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-800">Analysis Results</h2>
+          <p className="text-slate-600">{analysis.url}</p>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* Total Tags Count */}
-          <div className="bg-slate-50 rounded-lg p-4">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-blue-100 rounded-md p-3">
-                <Code className="h-6 w-6 text-primary" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-slate-500">Total Tags</h3>
-                <p className="text-2xl font-semibold text-slate-800">{analysis.totalCount}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* SEO Tags */}
-          <div className="bg-slate-50 rounded-lg p-4">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-green-100 rounded-md p-3">
-                <Search className="h-6 w-6 text-success" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-slate-500">SEO Tags</h3>
-                <p className="text-2xl font-semibold text-slate-800">{analysis.seoCount}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Social Tags */}
-          <div className="bg-slate-50 rounded-lg p-4">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-indigo-100 rounded-md p-3">
-                <MessageSquare className="h-6 w-6 text-indigo-500" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-slate-500">Social Tags</h3>
-                <p className="text-2xl font-semibold text-slate-800">{analysis.socialCount}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Missing Tags */}
-          <div className="bg-slate-50 rounded-lg p-4">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-orange-100 rounded-md p-3">
-                <AlertTriangle className="h-6 w-6 text-secondary" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-slate-500">Missing Tags</h3>
-                <p className="text-2xl font-semibold text-slate-800">{analysis.missingCount}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Health Score */}
-        <div className="bg-slate-50 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-slate-700 mb-3">Meta Tags Health Score</h3>
-          <div className="relative pt-1">
-            <div className="flex mb-2 items-center justify-between">
-              <div>
-                <Badge variant={getScoreBadgeVariant(analysis.healthScore)}>
-                  {analysis.healthScore}%
-                </Badge>
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-semibold inline-block text-slate-600">
-                  {getHealthScoreLabel(analysis.healthScore)}
-                </span>
-              </div>
-            </div>
-            <Progress
-              value={analysis.healthScore}
-              className="h-2 bg-slate-200"
-              indicatorClassName={getHealthScoreColor(analysis.healthScore)}
-            />
-          </div>
+        <div className="mt-3 sm:mt-0">
+          <Button
+            variant="outline"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary bg-blue-50 hover:bg-blue-100"
+            onClick={handleExport}
+          >
+            <DownloadIcon className="h-5 w-5 mr-2" />
+            Export Results
+          </Button>
         </div>
       </div>
 
+      {/* Health Summary */}
+      {healthSummary && <HealthSummaryCard summary={healthSummary} />}
+
+      {/* Top Fixes */}
+      {topFixes && topFixes.length > 0 && (
+        <TopFixesList fixes={topFixes} />
+      )}
 
       {/* Tag Categories Tabs */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <Tabs defaultValue="all" onValueChange={setActiveTab}>
-          <div className="border-b border-slate-200">
-            <TabsList className="flex">
+          <div className="border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center pr-4">
+            <TabsList className="flex overflow-x-auto w-full sm:w-auto">
               <TabsTrigger 
                 value="all" 
                 className="text-sm px-6 py-4 data-[state=active]:text-primary data-[state=active]:border-primary whitespace-nowrap data-[state=active]:border-b-2 font-medium"
@@ -223,6 +145,20 @@ export default function ResultsContainer({ isVisible, results, previousAnalysis 
                 Missing Tags
               </TabsTrigger>
             </TabsList>
+
+            {/* Show All Toggle */}
+            {activeTab !== "missing" && (
+              <div className="flex items-center space-x-2 py-2 sm:py-0">
+                <Switch 
+                  id="show-all-tags" 
+                  checked={showAllTags}
+                  onCheckedChange={setShowAllTags}
+                />
+                <Label htmlFor="show-all-tags" className="text-sm text-slate-600 cursor-pointer">
+                  Show all tags
+                </Label>
+              </div>
+            )}
           </div>
 
           <TabsContent value={activeTab} className="mt-0">

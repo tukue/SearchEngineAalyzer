@@ -21,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       status: 'ok',
       message: 'Meta Tag Analyzer API is healthy',
       timestamp: new Date().toISOString(),
-      version: '1.0.0'
+      version: '2.0.0'
     });
   }
 

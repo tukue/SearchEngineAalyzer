@@ -33,5 +33,6 @@ export async function analyzeUrl(normalizedUrl: string, options?: AnalyzerOption
       tenantId: analysis.tenantId,
       analysisId: analysis.id,
     } as any)),
+    topFixes: scoredData.topFixes
   };
 }
