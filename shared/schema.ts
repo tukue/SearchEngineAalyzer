@@ -150,10 +150,19 @@ export const urlSchema = z.object({
 
 export type UrlRequest = z.infer<typeof urlSchema>;
 
+export type TopFix = {
+  title: string;
+  severity: "Critical" | "High" | "Medium" | "Low";
+  affected_urls_count: number;
+  why: string;
+  how: string;
+};
+
 export type AnalysisResult = {
   analysis: Analysis;
   tags: MetaTag[];
   recommendations: Recommendation[];
+  topFixes?: TopFix[];
   quota?: QuotaStatus;
 };
 

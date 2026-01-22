@@ -1,4 +1,4 @@
-import { MetaTag, Recommendation } from "@shared/schema";
+import { MetaTag, Recommendation, TopFix } from "@shared/schema";
 
 export interface AnalyzerOptions {
   tenantId?: number;
@@ -22,4 +22,5 @@ export interface ParsedData {
 export interface ScoredData extends ParsedData {
   healthScore: number;
   recommendations: Partial<Recommendation>[];
+  topFixes: TopFix[];
 }

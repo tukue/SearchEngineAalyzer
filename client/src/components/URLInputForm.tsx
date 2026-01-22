@@ -34,9 +34,10 @@ const formSchema = z.object({
 type URLInputFormProps = {
   onSubmit: (url: string) => void;
   isLoading: boolean;
+  disabled?: boolean;
 };
 
-export default function URLInputForm({ onSubmit, isLoading }: URLInputFormProps) {
+export default function URLInputForm({ onSubmit, isLoading, disabled }: URLInputFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -72,9 +73,10 @@ export default function URLInputForm({ onSubmit, isLoading }: URLInputFormProps)
                         placeholder="https://example.com"
                         className="focus:ring-primary focus:border-primary block w-full pl-10 pr-12 py-6 text-sm border-slate-300 rounded-md"
                         {...field}
+                        disabled={disabled || isLoading}
                       />
                     </FormControl>
-                    {field.value && (
+                    {field.value && !disabled && !isLoading && (
                       <div className="absolute inset-y-0 right-0 flex py-1.5 pr-1.5">
                         <button
                           type="button"
@@ -95,7 +97,7 @@ export default function URLInputForm({ onSubmit, isLoading }: URLInputFormProps)
           <div className="flex items-end">
             <Button
               type="submit"
-              disabled={isLoading}
+              disabled={disabled || isLoading}
               className="bg-primary hover:bg-blue-600 text-white font-medium py-6 px-6 rounded-md transition duration-150 ease-in-out flex items-center justify-center min-w-[120px]"
             >
               {isLoading ? (

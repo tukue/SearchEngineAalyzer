@@ -75,6 +75,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch quota status" });
     }
   });
+
+  // Get current usage status (simplified for dashboard)
+  apiRouter.get("/usage/current", async (req, res) => {
+    try {
+      const tenantContext = req.tenantContext as TenantContext;
+      const quotaStatus = await UsageLimitsService.getQuotaStatus(tenantContext.tenantId);
+      
+      res.json({
+        period: quotaStatus.period,
+        used: quotaStatus.quotaUsed,
+        limit: quotaStatus.quotaLimit,
+        warning_level: quotaStatus.warningLevel
+      });
+    } catch (error) {
+      console.error("Error fetching usage status:", error);
+      res.status(500).json({ message: "Failed to fetch usage status" });
+    }
+  });
+
+  // Get current entitlements
+  apiRouter.get("/me/entitlements", async (req, res) => {
+    try {
+      const tenantContext = req.tenantContext as TenantContext;
+      const entitlements = PlanGatingService.getEntitlements(tenantContext);
+      res.json(entitlements);
+    } catch (error) {
+      console.error("Error fetching entitlements:", error);
+      res.status(500).json({ message: "Failed to fetch entitlements" });
+    }
+  });
   
   // Get analysis history with plan-based depth limiting
   apiRouter.get("/history", async (req, res) => {

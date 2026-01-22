@@ -41,7 +41,7 @@ export default function TagsTable({ tags }: TagsTableProps) {
     if (isPresent) {
       return <Badge variant="secondary" className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-success">Good</Badge>;
     }
-    return <Badge variant="destructive" className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-secondary">Missing</Badge>;
+    return <Badge variant="caution" className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-secondary">Missing</Badge>;
   };
 
   // Function to get tag attributes as a string

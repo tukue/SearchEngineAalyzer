@@ -33,7 +33,7 @@ This guide outlines pragmatic steps to keep the delivery pipeline lean while let
 
 ## Automation Backlog
 - Add dependency scanning (e.g., `npm audit` or SCA service) as a nightly job to avoid slowing feature builds.
-- Automate database migration review (lint for destructive changes, require approvals for production pushes).
+- Automate database migration review (lint for caution changes, require approvals for production pushes).
 - Periodically prune caches and preview environments to keep CI fast and costs predictable.
 
 Implementing these steps incrementally will keep the pipeline smooth while leaving room to ship features quickly.

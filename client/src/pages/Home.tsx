@@ -12,6 +12,8 @@ import ResultsContainer from "@/components/ResultsContainer";
 import GettingStarted from "@/components/GettingStarted";
 import { usePlanInfo, usePlanGatingErrorHandler, FeatureGate, PlanComparison } from "@/components/PlanGating";
 import { AnalysisResult } from "@shared/schema";
+import { UsageWidget } from "@/components/UsageWidget";
+import { useUsageStatus } from "@/hooks/useUsageStatus";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -36,9 +38,12 @@ export default function Home() {
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const [activeTab, setActiveTab] = useState("analyzer");
   const { toast } = useToast();
-  const { planInfo, loading: planLoading } = usePlanInfo();
+  const { planInfo, loading: planLoading, refetch: refetchPlan } = usePlanInfo();
   const { error: planError, handleError, ErrorComponent } = usePlanGatingErrorHandler();
+  const { usage } = useUsageStatus();
   const queryClient = useQueryClient();
+
+  const isLimitExceeded = usage?.warning_level === "exceeded";
 
   // Helper function for handling plan gating errors
   const handlePlanGatingError = (err: any, fallbackHandler: (err: any) => void) => {
@@ -107,7 +112,7 @@ export default function Home() {
     onError: (err: any) => {
       handlePlanGatingError(err, (err) => {
         toast({
-          variant: "destructive",
+          variant: "caution",
           title: "Analysis Failed",
           description: err.message || "An unexpected error occurred",
         });
@@ -135,7 +140,7 @@ export default function Home() {
     onError: (err: any) => {
       handlePlanGatingError(err, (err) => {
         toast({
-          variant: "destructive",
+          variant: "caution",
           title: "Export Failed",
           description: err.message || "Failed to export analysis",
         });
@@ -274,8 +279,15 @@ export default function Home() {
           </TabsList>
           
           <TabsContent value="analyzer" className="space-y-6">
+            {/* Usage Widget */}
+            <UsageWidget />
+
             {/* URL Input Form */}
-            <URLInputForm onSubmit={handleSubmit} isLoading={isPending} />
+            <URLInputForm 
+              onSubmit={handleSubmit} 
+              isLoading={isPending} 
+              disabled={isLimitExceeded}
+            />
 
             {/* Loading State */}
             <LoadingState isVisible={isPending} />

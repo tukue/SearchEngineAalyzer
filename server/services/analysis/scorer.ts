@@ -1,6 +1,25 @@
 import { ParsedData, ScoredData } from "./types";
-import { Recommendation } from "@shared/schema";
+import { Recommendation, TopFix } from "@shared/schema";
 import { IMPORTANT_SEO_TAGS, IMPORTANT_SOCIAL_TAGS, IMPORTANT_TECHNICAL_TAGS } from "./constants";
+
+const SEVERITY_MAP: Record<string, "Critical" | "High" | "Medium" | "Low"> = {
+  "title": "Critical",
+  "description": "Critical",
+  "canonical": "Critical",
+  "robots": "Critical",
+  "og:title": "Critical",
+  "og:description": "Critical",
+  "viewport": "High",
+  "og:image": "High",
+  "twitter:card": "High",
+};
+
+const SEVERITY_WEIGHTS = {
+  "Critical": 4,
+  "High": 3,
+  "Medium": 2,
+  "Low": 1
+};
 
 export class Scorer {
   static score(parsedData: ParsedData): ScoredData {
@@ -132,10 +151,36 @@ export class Scorer {
     
     const healthScore = Math.round((presentScoreTags / scoreTags.length) * 100);
 
+    // Compute Top Fixes
+    const topFixes: TopFix[] = recommendations.map(rec => {
+      const severity = SEVERITY_MAP[rec.tagName || ""] || "Medium";
+      return {
+        title: `Missing ${rec.tagName}`,
+        severity,
+        affected_urls_count: 1,
+        why: rec.description || "",
+        how: rec.example || ""
+      };
+    });
+
+    // Sort by severity (desc), then title (asc)
+    topFixes.sort((a, b) => {
+      const weightA = SEVERITY_WEIGHTS[a.severity];
+      const weightB = SEVERITY_WEIGHTS[b.severity];
+      if (weightA !== weightB) {
+        return weightB - weightA;
+      }
+      return a.title.localeCompare(b.title);
+    });
+
+    // Take top 3
+    const top3Fixes = topFixes.slice(0, 3);
+
     return {
       ...parsedData,
       healthScore,
       recommendations,
+      topFixes: top3Fixes
     };
   }
 }

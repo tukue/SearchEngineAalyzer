@@ -15,6 +15,22 @@ export class PlanGatingService {
     return planConfig[quota] as number;
   }
 
+  static getEntitlements(tenantContext: TenantContext) {
+    const planConfig = PLAN_CONFIGS[tenantContext.plan];
+    return {
+      plan: tenantContext.plan,
+      limits: {
+        monthlyAuditLimit: planConfig.monthlyAuditLimit,
+        historyDepth: planConfig.historyDepth
+      },
+      features: {
+        exportsEnabled: planConfig.exportsEnabled,
+        webhooksEnabled: planConfig.webhooksEnabled,
+        apiAccessEnabled: planConfig.apiAccessEnabled
+      }
+    };
+  }
+
   static createPlanError(feature: string, currentPlan: string, requiredPlan?: string): PlanGatingError {
     return {
       code: "PLAN_UPGRADE_REQUIRED",

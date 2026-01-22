@@ -57,7 +57,7 @@ try {
   domReady = false;
 }
 
-const maybeTest = domReady ? test : test.skip;
+const maybeTest = domReady ? test : test.skip; // Re-enable tests if DOM is ready
 
 import AnalyzePage from '../app/(routes)/analyze/page';
 import * as queryClientModule from '../lib/queryClient';
