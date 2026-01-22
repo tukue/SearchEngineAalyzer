@@ -56,7 +56,7 @@ export function computeHealthSummary(tags: MetaTag[]): HealthSummary {
     totalChecked++;
     // Assuming "Missing" or empty content means fail/invalid based on context
     // Also checking isPresent flag if available, though backend might set it false for missing tags
-    const isValid = tag.isPresent && tag.content !== "Missing" && tag.content !== ""; 
+    const isValid = tag.isPresent && tag.content !== "Missing" && tag.content && tag.content.trim() !== ""; 
     
     if (isValid) {
       totalValid++;

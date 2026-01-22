@@ -21,10 +21,10 @@ export default function TopFixesList({ fixes }: TopFixesListProps) {
     );
   }
 
-  const getSeverityColor = (severity: string) => {
+  const getSeverityColor = (severity: string): "default" | "destructive" | "secondary" | "outline" => {
     switch (severity) {
       case "Critical": return "destructive";
-      case "High": return "orange"; // Custom variant might be needed, falling back to default or secondary
+      case "High": return "destructive"; // Use destructive for high severity
       case "Medium": return "secondary";
       case "Low": return "outline";
       default: return "secondary";
@@ -45,7 +45,7 @@ export default function TopFixesList({ fixes }: TopFixesListProps) {
             <div key={index} className="border rounded-lg p-4 bg-slate-50">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-semibold text-slate-900">{fix.title}</h3>
-                <Badge variant={getSeverityColor(fix.severity) as any}>{fix.severity}</Badge>
+                <Badge variant={getSeverityColor(fix.severity)}>{fix.severity}</Badge>
               </div>
               <p className="text-sm text-slate-600 mb-2">{fix.why}</p>
               <div className="text-xs bg-white p-2 rounded border font-mono text-slate-700">
