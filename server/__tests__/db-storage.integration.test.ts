@@ -32,21 +32,39 @@ describeIf("DbStorage integration", () => {
   afterAll(async () => {
     if (!db || !tenantId) return;
 
+    const safeDelete = async (label: string, action: () => Promise<unknown>) => {
+      try {
+        await action();
+      } catch (error) {
+        console.error(`Failed to clean up ${label}:`, error);
+      }
+    };
+
     const analysisRows = await db.query.analyses.findMany({
       where: eq(analyses.tenantId, tenantId)
     });
 
     for (const analysis of analysisRows) {
-      await db.delete(recommendations).where(eq(recommendations.analysisId, analysis.id));
+      await safeDelete("recommendations", () =>
+        db.delete(recommendations).where(eq(recommendations.analysisId, analysis.id))
+      );
     }
 
-    await db.delete(metaTags).where(eq(metaTags.tenantId, tenantId));
-    await db.delete(analyses).where(eq(analyses.tenantId, tenantId));
-    await db.delete(usageLedger).where(eq(usageLedger.tenantId, tenantId));
-    await db.delete(monthlyUsage).where(eq(monthlyUsage.tenantId, tenantId));
-    await db.delete(usageTracking).where(eq(usageTracking.tenantId, tenantId));
-    await db.delete(planChanges).where(eq(planChanges.tenantId, tenantId));
-    await db.delete(tenants).where(eq(tenants.id, tenantId));
+    await safeDelete("metaTags", () => db.delete(metaTags).where(eq(metaTags.tenantId, tenantId)));
+    await safeDelete("analyses", () => db.delete(analyses).where(eq(analyses.tenantId, tenantId)));
+    await safeDelete("usageLedger", () =>
+      db.delete(usageLedger).where(eq(usageLedger.tenantId, tenantId))
+    );
+    await safeDelete("monthlyUsage", () =>
+      db.delete(monthlyUsage).where(eq(monthlyUsage.tenantId, tenantId))
+    );
+    await safeDelete("usageTracking", () =>
+      db.delete(usageTracking).where(eq(usageTracking.tenantId, tenantId))
+    );
+    await safeDelete("planChanges", () =>
+      db.delete(planChanges).where(eq(planChanges.tenantId, tenantId))
+    );
+    await safeDelete("tenants", () => db.delete(tenants).where(eq(tenants.id, tenantId)));
   });
 
   it("creates and retrieves analysis data", async () => {

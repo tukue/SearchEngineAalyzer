@@ -12,8 +12,8 @@ export function createDb(): Database {
     throw new Error("DATABASE_URL is not set. Cannot initialize database client.");
   }
 
-  const sql = neon(process.env.DATABASE_URL);
-  return drizzle(sql, { schema });
+  const neonClient = neon(process.env.DATABASE_URL);
+  return drizzle(neonClient, { schema });
 }
 
 export const db: Database | null = isDatabaseEnabled

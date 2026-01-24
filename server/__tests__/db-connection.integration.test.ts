@@ -7,8 +7,8 @@ const describeIf = hasDatabase ? describe : describe.skip;
 describeIf("Database connectivity", () => {
   it("connects and runs a simple query", async () => {
     try {
-      const db = createDb();
-      const result = await db.execute(sql`select 1 as ok`);
+      const dbInstance = createDb();
+      const result = await dbInstance.execute(sql`select 1 as ok`);
       const row = Array.isArray(result) ? result[0] : result?.rows?.[0];
 
       expect(row).toBeDefined();
