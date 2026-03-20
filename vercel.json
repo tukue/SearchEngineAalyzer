@@ -3,11 +3,6 @@
   "installCommand": "npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund",
   "buildCommand": "npm run build:client",
   "outputDirectory": "dist/public",
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "@vercel/node@5.5.19"
-    }
-  },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
     { "handle": "filesystem" },

@@ -40,7 +40,7 @@ This keeps production serving compiled UI assets (not source files) while preser
 - Install step: `npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund`.
 - Build step: `npm run build:client`.
 - Expected frontend output path: `dist/public`.
-- API handlers live under `api/` and are pinned in `vercel.json` to `@vercel/node@5.5.19`.
+- API handlers live under `api/` and use Vercel's default Node serverless runtime.
 
 ## Manual Deployment
 ```bash
