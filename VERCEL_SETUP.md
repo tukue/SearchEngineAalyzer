@@ -25,7 +25,7 @@ Add:
 - `VERCEL_PROJECT_ID` - Your project ID
 
 ## Deployment mode used in this repo
-This repository deploys as:
+This repository deploys on **Vercel only**:
 - **Frontend:** static Vite build (`npm run build:client`) published from `dist/public`.
 - **Backend:** Vercel serverless API handlers under `api/`.
 
@@ -54,7 +54,3 @@ npx vercel --prod
 4. Verify:
    - `/` serves built frontend UI.
    - `/api/health` returns JSON.
-
-
-## Docker runtime note
-- The Docker image serves `dist/public` with nginx and includes SPA fallback via `nginx.conf` (`try_files $uri $uri/ /index.html;`).
