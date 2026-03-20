@@ -37,7 +37,7 @@ This keeps production serving compiled UI assets (not source files) while preser
 
 ## Verification checklist (local + Vercel)
 - Node version: **20.x**.
-- Install step: `npm install --ignore-scripts --no-audit --no-fund` (prevents `postinstall` from running `npm --prefix next install` on Vercel, which was causing OOM/SIGKILL).
+- Install step: `npm ci --ignore-scripts --no-audit --no-fund` (faster, lockfile-based install; also prevents `postinstall` from running `npm --prefix next install` on Vercel, which was causing OOM/SIGKILL).
 - Build step: `npm run build:client`.
 - Expected frontend output path: `dist/public`.
 - API handlers live under `api/` and use Vercel's default Node serverless runtime.
@@ -55,8 +55,3 @@ npx vercel --prod
    - `/` serves built frontend UI.
    - `/api/health` returns JSON.
 
-
-## Peer dependency alignment note
-- This project uses React 19, so `react-day-picker` is aligned to the React 19-compatible v9 line.
-
-- `package.json` uses `overrides` to pin `react`, `react-dom`, and `react-day-picker` to compatible versions during install resolution.
