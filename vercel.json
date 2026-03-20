@@ -4,9 +4,6 @@
   "buildCommand": "npm run build:client",
   "outputDirectory": "dist/public",
   "functions": {
-    "api/**/*.js": {
-      "runtime": "@vercel/node@5.5.19"
-    },
     "api/**/*.ts": {
       "runtime": "@vercel/node@5.5.19"
     }
