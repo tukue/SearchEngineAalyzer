@@ -58,3 +58,5 @@ npx vercel --prod
 
 ## Peer dependency alignment note
 - This project uses React 19, so `react-day-picker` is aligned to the React 19-compatible v9 line.
+
+- `package.json` uses `overrides` to pin `react`, `react-dom`, and `react-day-picker` to compatible versions during install resolution.

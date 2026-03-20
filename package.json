@@ -129,5 +129,10 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
+  },
+  "overrides": {
+    "react-day-picker": "^9.11.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
   }
 }
