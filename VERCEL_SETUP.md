@@ -24,29 +24,32 @@ Add:
 - `VERCEL_ORG_ID` - Your organization ID
 - `VERCEL_PROJECT_ID` - Your project ID
 
+## Deployment mode used in this repo
+This repository deploys as:
+- **Frontend:** static Vite build (`npm run build:client`) published from `dist/public`.
+- **Backend:** Vercel serverless API handlers under `api/`.
+
+This keeps production serving compiled UI assets (not source files) while preserving `/api/*` routes.
+
 ## Environment variables
-- `API_BASE_URL` - API origin used by the Express functions; set under `Project Settings > Environment Variables` in the Vercel dashboard (or via `.vercel/env.*`).
-- Any client-exposed variables must be prefixed with `VITE_` (e.g., `VITE_API_BASE_URL`). Server-only secrets are read via `process.env` in `api/` handlers.
+- `VITE_*` variables are exposed to the frontend build (for example, `VITE_API_BASE_URL`).
+- Server-only secrets must be regular env vars consumed from `process.env` by `api/` handlers.
 
 ## Verification checklist (local + Vercel)
-- Node version: **20.x** (Vercel inherits this from the repo root `package.json` and the Project Settings Node version should match; the build error `Function Runtimes must have a valid version` appears if runtimes are not set to `nodejs20.x` for the `api/**/*.{js,ts}` handlers).
-- Install step: `npm install --legacy-peer-deps` at the repo root (matches the Vercel `installCommand`).
-- Build step: `npm run build` (runs the Vite build and emits `dist/public`).
-- Expected output path: `dist/public`.
-- If a clean-room check is needed, run locally: `rm -rf node_modules && npm install --legacy-peer-deps && npm run build`.
+- Node version: **20.x**.
+- Install step: `npm install --legacy-peer-deps`.
+- Build step: `npm run build:client`.
+- Expected frontend output path: `dist/public`.
+- API handlers live under `api/`; runtime is resolved by Vercel from the platform/default settings.
 
 ## Manual Deployment
 ```bash
 npx vercel --prod
 ```
 
-## Status
-- ✅ Vercel configuration fixed
-- ✅ Source code protection added
-- ✅ CI/CD pipeline updated
-- ⏳ Secrets need to be configured
-
 ## Next Steps
-1. Configure GitHub secrets
-2. Trigger CI/CD pipeline
-3. Verify deployment at Vercel URL
+1. Configure GitHub secrets.
+2. Trigger CI/CD pipeline.
+3. Verify:
+   - `/` serves built frontend UI.
+   - `/api/health` returns JSON.
