@@ -37,7 +37,7 @@ This keeps production serving compiled UI assets (not source files) while preser
 
 ## Verification checklist (local + Vercel)
 - Node version: **20.x**.
-- Install step: `npm install --legacy-peer-deps`.
+- Install step: `npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund`.
 - Build step: `npm run build:client`.
 - Expected frontend output path: `dist/public`.
 - API handlers live under `api/` and are pinned in `vercel.json` to `@vercel/node@5.5.19`.
@@ -48,9 +48,10 @@ npx vercel --prod
 ```
 
 ## Next Steps
-1. Configure GitHub secrets.
-2. Trigger CI/CD pipeline.
-3. Verify:
+1. In Vercel Project Settings, keep Node.js version on **20.x** (the repo `engines.node` is `20.x`).
+2. Configure GitHub secrets.
+3. Trigger CI/CD pipeline.
+4. Verify:
    - `/` serves built frontend UI.
    - `/api/health` returns JSON.
 
