@@ -1,11 +1,19 @@
 {
   "version": 2,
-  "installCommand": "npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund",
+  "installCommand": "npm install --no-audit --no-fund",
   "buildCommand": "npm run build:client",
   "outputDirectory": "dist/public",
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
   ]
 }

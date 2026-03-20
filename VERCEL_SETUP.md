@@ -37,7 +37,7 @@ This keeps production serving compiled UI assets (not source files) while preser
 
 ## Verification checklist (local + Vercel)
 - Node version: **20.x**.
-- Install step: `npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund`.
+- Install step: `npm install --no-audit --no-fund`.
 - Build step: `npm run build:client`.
 - Expected frontend output path: `dist/public`.
 - API handlers live under `api/` and use Vercel's default Node serverless runtime.
@@ -54,3 +54,7 @@ npx vercel --prod
 4. Verify:
    - `/` serves built frontend UI.
    - `/api/health` returns JSON.
+
+
+## Peer dependency alignment note
+- This project uses React 19, so `react-day-picker` is aligned to the React 19-compatible v9 line.
