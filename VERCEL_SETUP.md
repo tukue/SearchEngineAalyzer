@@ -37,7 +37,7 @@ This keeps production serving compiled UI assets (not source files) while preser
 
 ## Verification checklist (local + Vercel)
 - Node version: **20.x**.
-- Install step: `npm install --no-audit --no-fund`.
+- Install step: `npm install --ignore-scripts --no-audit --no-fund` (prevents `postinstall` from running `npm --prefix next install` on Vercel, which was causing OOM/SIGKILL).
 - Build step: `npm run build:client`.
 - Expected frontend output path: `dist/public`.
 - API handlers live under `api/` and use Vercel's default Node serverless runtime.
