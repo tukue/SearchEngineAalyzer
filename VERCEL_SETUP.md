@@ -24,29 +24,40 @@ Add:
 - `VERCEL_ORG_ID` - Your organization ID
 - `VERCEL_PROJECT_ID` - Your project ID
 
+## Deployment mode used in this repo
+This repository deploys on **Vercel only**:
+- **Frontend:** static Vite build (`npm run build:client`) published from `dist/public`.
+- **Backend:** Vercel serverless API handlers under `api/`.
+
+This keeps production serving compiled UI assets (not source files) while preserving `/api/*` routes.
+
 ## Environment variables
-- `API_BASE_URL` - API origin used by the Express functions; set under `Project Settings > Environment Variables` in the Vercel dashboard (or via `.vercel/env.*`).
-- Any client-exposed variables must be prefixed with `VITE_` (e.g., `VITE_API_BASE_URL`). Server-only secrets are read via `process.env` in `api/` handlers.
+- `VITE_*` variables are exposed to the frontend build (for example, `VITE_API_BASE_URL`).
+- Server-only secrets must be regular env vars consumed from `process.env` by `api/` handlers.
 
 ## Verification checklist (local + Vercel)
-- Node version: **20.x** (Vercel inherits this from the repo root `package.json` and the Project Settings Node version should match; the build error `Function Runtimes must have a valid version` appears if runtimes are not set to `nodejs20.x` for the `api/**/*.{js,ts}` handlers).
-- Install step: `npm install --legacy-peer-deps` at the repo root (matches the Vercel `installCommand`).
-- Build step: `npm run build` (runs the Vite build and emits `dist/public`).
-- Expected output path: `dist/public`.
-- If a clean-room check is needed, run locally: `rm -rf node_modules && npm install --legacy-peer-deps && npm run build`.
+- Node version: **20.x**.
+- Install step: `npm install --ignore-scripts --no-audit --no-fund` (keeps installs lean and avoids lifecycle scripts during the primary Vercel install phase).
+- Build step: `npm run build:client`.
+- Fallback safety: root scripts `build` and `vercel-build` both run `npm run build:client`, so even if Vercel Project Settings still call `npm run vercel-build`, deployment remains Vite-only.
+- Expected frontend output path: `dist/public`.
+- API handlers live under `api/` and are pinned via `vercel.json` to `@vercel/node@5.5.20` for predictable runtime resolution.
+- Root `postinstall` is CI-safe: it skips nested `next/` install automatically when `VERCEL` or `CI=true` is detected, preventing OOM/SIGKILL during Vercel function dependency installation.
 
 ## Manual Deployment
 ```bash
 npx vercel --prod
 ```
 
-## Status
-- ✅ Vercel configuration fixed
-- ✅ Source code protection added
-- ✅ CI/CD pipeline updated
-- ⏳ Secrets need to be configured
-
 ## Next Steps
-1. Configure GitHub secrets
-2. Trigger CI/CD pipeline
-3. Verify deployment at Vercel URL
+1. In Vercel Project Settings, keep Node.js version on **20.x** (the repo `engines.node` is `20.x`).
+2. Configure GitHub secrets.
+3. Trigger CI/CD pipeline.
+4. Verify:
+   - `/` serves built frontend UI.
+   - `/api/health` returns JSON.
+
+
+
+## Peer dependency note
+- React 19 projects should use `react-day-picker` v9+; v8 only supports React <=18 and will fail with ERESOLVE.

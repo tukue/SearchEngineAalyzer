@@ -1,19 +1,24 @@
 {
   "version": 2,
-  "installCommand": "npm install --legacy-peer-deps",
-  "buildCommand": "npm run build",
+  "installCommand": "npm install --ignore-scripts --no-audit --no-fund",
+  "buildCommand": "npm run build:client",
   "outputDirectory": "dist/public",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x"
-    },
-    "api/**/*.ts": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
-  ]
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node@5.5.20"
+    }
+  }
 }
