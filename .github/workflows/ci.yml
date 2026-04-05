@@ -22,9 +22,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
-          cache-dependency-path: |
-            package-lock.json
-            next/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Verify Node version
         run: node --version
