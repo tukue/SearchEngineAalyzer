@@ -26,6 +26,11 @@ const migratedEndpoints = process.env.NEXT_MIGRATED_API_ENDPOINTS
   .filter(Boolean);
 
 const ANALYZE_ENDPOINT_NAME = "analyze";
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization"
+};
 
 function isNextEndpointEnabled(endpoint: string) {
   if (!migratedEndpoints || migratedEndpoints.length === 0) {
@@ -145,7 +150,7 @@ export async function POST(req: NextRequest) {
   if (!isNextEndpointEnabled(ANALYZE_ENDPOINT_NAME)) {
     return NextResponse.json(
       { message: "Next.js analyze handler disabled via NEXT_MIGRATED_API_ENDPOINTS" },
-      { status: 503 }
+      { status: 503, headers: CORS_HEADERS }
     );
   }
 
@@ -164,7 +169,7 @@ export async function POST(req: NextRequest) {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to connect to the target website";
-      return NextResponse.json({ message }, { status: 400 });
+      return NextResponse.json({ message }, { status: 400, headers: CORS_HEADERS });
     }
 
     const $ = cheerio.load(html);
@@ -355,14 +360,24 @@ export async function POST(req: NextRequest) {
     };
 
     const storedAnalysis = await storage.createAnalysis(analysisResult);
-    return NextResponse.json(storedAnalysis);
+    return NextResponse.json(storedAnalysis, { headers: CORS_HEADERS });
   } catch (error) {
     if (error instanceof z.ZodError) {
       const validationError = formatZodError(error);
-      return NextResponse.json({ message: validationError || "Invalid URL format" }, { status: 400 });
+      return NextResponse.json(
+        { message: validationError || "Invalid URL format" },
+        { status: 400, headers: CORS_HEADERS }
+      );
     }
 
     console.error("Next.js analyze handler error:", error);
-    return NextResponse.json({ message: "Failed to analyze website" }, { status: 500 });
+    return NextResponse.json({ message: "Failed to analyze website" }, { status: 500, headers: CORS_HEADERS });
   }
+}
+
+export function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: CORS_HEADERS
+  });
 }
