@@ -8,9 +8,9 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx server/index.ts",
-    "build": "npm run build:client",
+    "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
-    "vercel-build": "npm run build:client",
+    "vercel-build": "npm run build",
     "vercel-dev": "vite",
     "postinstall": "node scripts/postinstall.mjs",
     "start": "node dist/index.js",
@@ -20,8 +20,9 @@
     "test:plan-gating": "jest server/__tests__/plan-gating",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "ci:checks": "node test.js && node api-test.js && npm test && npm run build:client",
-    "ci:local": "npm install --legacy-peer-deps && npm run ci:checks"
+    "ci:checks": "node test.js && node api-test.js && npm test && npm run build",
+    "ci:local": "npm install --legacy-peer-deps && npm run ci:checks",
+    "build:server": "esbuild server/index.ts --platform=node --bundle --format=esm --packages=external --outfile=dist/index.js --tsconfig=tsconfig.json"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

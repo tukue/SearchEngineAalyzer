@@ -1,70 +1,79 @@
-# Meta Tag Analyzer
+# Meta Tag Analyzer (Vite + Express)
 
-Meta Tag Analyzer is a web application that analyzes and validates meta tags from any website. It provides actionable recommendations to improve SEO, social media sharing, and technical metadata.
+Meta Tag Analyzer analyzes website metadata and returns actionable SEO, social, and technical recommendations.
 
-## Features
+This repository now runs as a single **Vite frontend + Express backend** application.
 
-- **Meta Tag Analysis**: Analyze meta tags from any website and categorize them into SEO, Social, and Technical tags.
-- **Recommendations**: Get actionable recommendations to improve your meta tags.
-- **Search History**: View and manage your recent analyses.
-- **Responsive Design**: Works seamlessly on both desktop and mobile devices.
+## Stack
 
+- Frontend: React + Vite (`client/`)
+- Backend: Express + TypeScript (`server/`)
+- Shared contracts/types: `shared/`
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
+- Node.js 20+
+- npm 8+
 
-- Node.js (v20 or higher)
-- npm (v8 or higher)
+## Environment variables
 
-### Environment configuration
+- `API_AUTH_TOKEN` (server): required bearer token for protected API calls.
+- `VITE_API_TOKEN` (client): bearer token sent by the frontend; should match `API_AUTH_TOKEN`.
+- `TEST_API_TOKEN` (optional): token used during test runs.
 
-Authentication is required for write APIs. Set the following variables when running locally:
-
-- **API_AUTH_TOKEN** (server): required bearer token value accepted by the API. Example: `API_AUTH_TOKEN=dev-token-123`.
-- **VITE_API_TOKEN** (client): token the frontend sends in the `Authorization` header. This must match `API_AUTH_TOKEN` (or an entry in `API_AUTH_TOKENS` if using multiple tokens).
-- **API_BASE_URL** (Next.js): base URL for rewrites to the API; defaults to `http://localhost:5000` and only needs to be set when proxying to a hosted backend.
-- **NEXT_MIGRATED_API_ENDPOINTS** (Next.js): optional comma-separated list limiting which migrated handlers stay on Next.js. Leave empty to run all migrated endpoints there; include `history` (and other features) when their routes move to `app/api`.
-
-For automated tests, `TEST_API_TOKEN` can be set; otherwise a `test-token` default is used while `NODE_ENV=test`.
-
-### Installation
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/tukue/SearchEngineAalyzer.git
-   cd SearchEngineAalyzer
-   ```
-
-### Installing dependencies
-
-Run dependencies installation with scripts disabled for faster CI:
+## Install
 
 ```bash
 npm ci --ignore-scripts
 ```
 
-If the registry responds with **403 Forbidden** (common in restricted environments), set an auth token and retry:
+## Run locally
 
 ```bash
-export NPM_TOKEN="<npm-registry-token>"
-npm ci --ignore-scripts --registry=https://registry.npmjs.org
+npm run dev
 ```
 
-The repository includes a `.npmrc` that uses `NPM_TOKEN` automatically so CI systems can inject credentials without modifying commands.
+This starts Express on port `5000` and serves Vite middleware in development.
 
-## Next.js API migration
+## Build (production)
 
-- The analyze API is now implemented under `next/app/api/analyze/route.ts`, reusing the existing meta-tag analysis logic and shared storage. This handler mirrors `POST /api/analyze` so traffic can be routed to the Next.js runtime once parity is confirmed.
-- Use `NEXT_MIGRATED_API_ENDPOINTS` (comma-separated, case-insensitive) to control which handlers run via Next.js. By default Next.js serves every migrated endpoint; omit an endpoint from the list to fall back to the Express implementation in `server/routes.ts` during the transition.
-- The health check now also runs at `next/app/api/health/route.ts` behind the same migration flag so probes can target the Next.js runtime without bypassing the toggle list.
-- A beta `/analyze` page in the app router exercises the migrated handler end-to-end, showing loading/error states and the returned health score so parity checks can happen in the Next.js UI.
-- Additional Express routes (plan, quota, history, export) should be migrated incrementally to `app/api/<route>/route.ts` and added to `NEXT_MIGRATED_API_ENDPOINTS` before fully retiring the Express server. When migrating the search history feature, list its endpoints in `NEXT_MIGRATED_API_ENDPOINTS` so they stay on the Next.js runtime.
-- Running `npm run build` at the repo root now invokes the Next workspace (`next/package.json`), so `rm -rf next/.next && npm run build` mirrors Vercel's pipeline and ensures the Next-only stack is what's deployed.
+```bash
+npm run build
+```
 
-## Deployment
+Build output:
 
-- Vercel now builds the Next.js app (`next/package.json`) directly by targeting the `next` directory (see `vercel.json`), so deploying to Vercel triggers `npm run build` from that folder and serves the new `app` router.
-- Before pointing production traffic to Vercel's Next.js deployment, confirm parity on each API route and include them in `NEXT_MIGRATED_API_ENDPOINTS`. Leaving the list empty keeps every migrated endpoint on Next.js; remove an entry (e.g., `plan`) to fall back to the Express server while the rest continue to run in Next.js.
-- After parity is confirmed and all needed endpoints run on Next.js, remove the Express service from the Vercel deployment, keep the `NEXT_MIGRATED_API_ENDPOINTS` env listing all endpoints, and rely on the `next/app/api` handlers for both UI and API traffic.
+- `dist/public` — Vite static frontend bundle
+- `dist/index.js` — bundled Express server
+
+## Start (production)
+
+```bash
+npm run start
+```
+
+## Deploy
+
+Use a Node host (Docker, Render, Railway, Fly, etc.) that can run a long-lived Express process.
+
+Deployment command sequence:
+
+1. `npm ci --ignore-scripts`
+2. `npm run build`
+3. `npm run start`
+
+### Docker
+
+A Dockerfile is included. Typical flow:
+
+```bash
+docker build -t meta-tag-analyzer .
+docker run -p 5000:5000 --env-file .env meta-tag-analyzer
+```
+
+## Test and CI checks
+
+```bash
+npm test
+npm run ci:checks
+```
