@@ -125,4 +125,40 @@ describe('Next.js analyze API handler', () => {
     expect(response.headers.get('Access-Control-Allow-Methods')).toContain('OPTIONS');
     expect(response.headers.get('Access-Control-Allow-Headers')).toContain('Content-Type');
   });
+
+  it('supports GET analyze requests with url query parameter', async () => {
+    const html = `
+      <html>
+        <head>
+          <title>Example</title>
+          <meta name="description" content="Site description" />
+        </head>
+      </html>
+    `;
+
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers({ 'content-type': 'text/html' }),
+      text: async () => html,
+      json: async () => ({ html }),
+      blob: async () => new Blob([html]),
+      arrayBuffer: async () => new TextEncoder().encode(html).buffer,
+      formData: async () => new FormData(),
+      clone: function () {
+        return { ...this } as Response;
+      }
+    } as unknown as Response);
+
+    const { GET } = await loadAnalyzeHandler();
+    const request = new NextRequest('http://localhost/api/analyze?url=https://example.com', {
+      method: 'GET',
+    });
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.analysis.url).toBe('https://example.com');
+  });
 });
