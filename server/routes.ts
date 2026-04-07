@@ -12,7 +12,22 @@ import { requireAuthContext } from "./context";
 import { buildHealthResponse } from "../shared/health";
 import { analyzeUrl } from "./services/analysis";
 
+const BASIC_API_MODE_VALUES = new Set(["1", "true", "yes", "on"]);
+
+function isBasicApiMode() {
+  const rawValue = process.env.BASIC_API_MODE;
+  if (!rawValue) {
+    return false;
+  }
+
+  return BASIC_API_MODE_VALUES.has(rawValue.trim().toLowerCase());
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  if (isBasicApiMode()) {
+    return registerBasicRoutes(app);
+  }
+
   // API routes
   const apiRouter = express.Router();
   const isAuthDisabled =
@@ -210,6 +225,236 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.use("/api", apiRouter);
   
+  const httpServer = createServer(app);
+  return httpServer;
+}
+
+async function registerBasicRoutes(app: Express): Promise<Server> {
+  const apiRouter = express.Router();
+
+  apiRouter.get("/health", (_req, res) => {
+    res.status(200).json(buildHealthResponse());
+  });
+
+  apiRouter.post("/analyze", async (req, res) => {
+    let tenantContext: TenantContext;
+
+    try {
+      tenantContext = await getDefaultTenantContext();
+    } catch (error) {
+      console.error("Failed to load tenant context:", error);
+      return res.status(500).json({ message: "System error occurred" });
+    }
+
+    try {
+      const { url } = urlSchema.parse(req.body);
+      const parsedUrl = await validatePublicHttpsUrl(url, `tenant=${tenantContext.tenantId}`);
+      const normalizedUrl = parsedUrl.toString();
+
+      let response;
+      try {
+        response = await fetchWithNetworkLimits(normalizedUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; MetaTagAnalyzer/1.0)",
+          },
+        });
+      } catch (error) {
+        throw createHttpError(
+          `Failed to connect to the website: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+
+      if (!response.ok) {
+        throw createHttpError(`Failed to fetch website: ${response.status} ${response.statusText}`);
+      }
+
+      const html = await response.text();
+      const $ = cheerio.load(html);
+
+      const importantSeoTags = ["title", "description", "keywords", "viewport", "canonical"];
+      const importantSocialTags = [
+        "og:title",
+        "og:description",
+        "og:image",
+        "og:url",
+        "og:type",
+        "twitter:card",
+        "twitter:title",
+        "twitter:description",
+        "twitter:image",
+      ];
+      const importantTechnicalTags = ["robots", "charset", "content-type", "language", "author", "generator"];
+
+      let seoCount = 0;
+      let socialCount = 0;
+      let technicalCount = 0;
+      let missingCount = 0;
+
+      const foundMetaTags: any[] = [];
+      const recommendations: any[] = [];
+
+      const titleTag = $("title").first().text();
+      if (titleTag) {
+        foundMetaTags.push({
+          name: "title",
+          content: titleTag,
+          tagType: "SEO",
+          isPresent: true,
+        });
+        seoCount++;
+      } else {
+        foundMetaTags.push({
+          name: "title",
+          content: "Missing",
+          tagType: "SEO",
+          isPresent: false,
+        });
+        missingCount++;
+      }
+
+      const canonicalLink = $('link[rel="canonical"]').attr("href");
+      if (canonicalLink) {
+        foundMetaTags.push({
+          rel: "canonical",
+          content: canonicalLink,
+          tagType: "SEO",
+          isPresent: true,
+        });
+        seoCount++;
+      } else {
+        foundMetaTags.push({
+          rel: "canonical",
+          content: "Missing",
+          tagType: "SEO",
+          isPresent: false,
+        });
+        missingCount++;
+      }
+
+      $("meta").each((_, elem) => {
+        const name = $(elem).attr("name");
+        const property = $(elem).attr("property");
+        const httpEquiv = $(elem).attr("http-equiv");
+        const charset = $(elem).attr("charset");
+        const content = $(elem).attr("content") || "";
+
+        let tagType: "SEO" | "Social" | "Technical" = "Technical";
+
+        if (name && importantSeoTags.includes(name)) {
+          tagType = "SEO";
+        } else if (property && property.startsWith("og:")) {
+          tagType = "Social";
+        } else if (name && name.startsWith("twitter:")) {
+          tagType = "Social";
+        }
+
+        const metaTag = {
+          name,
+          property,
+          httpEquiv,
+          charset,
+          content,
+          tagType,
+          isPresent: Boolean(content || charset),
+        };
+
+        if (tagType === "SEO") {
+          seoCount++;
+        } else if (tagType === "Social") {
+          socialCount++;
+        } else {
+          technicalCount++;
+        }
+
+        foundMetaTags.push(metaTag);
+      });
+
+      const tagExists = (tag: string) =>
+        foundMetaTags.some((metaTag) => metaTag.name === tag || metaTag.property === tag);
+
+      importantSeoTags.forEach((tag) => {
+        if (!tagExists(tag)) {
+          foundMetaTags.push({
+            name: tag,
+            content: "Missing",
+            tagType: "SEO",
+            isPresent: false,
+          });
+          missingCount++;
+        }
+      });
+
+      importantSocialTags.forEach((tag) => {
+        if (!tagExists(tag)) {
+          foundMetaTags.push({
+            property: tag,
+            content: "Missing",
+            tagType: "Social",
+            isPresent: false,
+          });
+          missingCount++;
+        }
+      });
+
+      importantTechnicalTags.forEach((tag) => {
+        if (!tagExists(tag)) {
+          foundMetaTags.push({
+            name: ["robots", "author", "generator", "language"].includes(tag) ? tag : undefined,
+            httpEquiv: tag === "content-type" ? tag : undefined,
+            charset: tag === "charset" ? "missing" : undefined,
+            content: "Missing",
+            tagType: "Technical",
+            isPresent: false,
+          });
+          missingCount++;
+        }
+      });
+
+      const totalImportantTags =
+        importantSeoTags.length +
+        importantSocialTags.filter((tag) =>
+          ["og:title", "og:description", "og:image", "twitter:card"].includes(tag),
+        ).length +
+        importantTechnicalTags.filter((tag) => ["robots", "charset"].includes(tag)).length;
+
+      const presentImportantTags = totalImportantTags - missingCount;
+      const healthScore = Math.round((presentImportantTags / totalImportantTags) * 100);
+
+      const analysisResult = {
+        analysis: {
+          id: 0,
+          url: normalizedUrl,
+          totalCount: foundMetaTags.length,
+          seoCount,
+          socialCount,
+          technicalCount,
+          missingCount,
+          healthScore,
+          timestamp: new Date().toISOString(),
+        },
+        tags: foundMetaTags,
+        recommendations,
+      };
+
+      const storedAnalysis = await storage.createAnalysis(tenantContext.tenantId, analysisResult);
+      res.json(storedAnalysis);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationError = formatZodError(error);
+        return res.status(400).json({ message: validationError || "Invalid request format" });
+      }
+
+      if ((error as any).status) {
+        return res.status((error as any).status).json({ message: (error as Error).message });
+      }
+
+      console.error("Error analyzing website:", error);
+      res.status(500).json({ message: "Failed to analyze website" });
+    }
+  });
+
+  app.use("/api", apiRouter);
+
   const httpServer = createServer(app);
   return httpServer;
 }
