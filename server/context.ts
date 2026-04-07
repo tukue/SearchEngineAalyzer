@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { TenantContext } from "@shared/schema";
 import { storage } from "./storage";
+import { verifySupabaseJwt } from "./supabase/auth";
 
 export type TenantRole = "owner" | "member" | "read-only";
 
@@ -119,6 +120,12 @@ function applyRoleOverride(baseRole: TenantRole, requestedRole?: string | null):
   return requestedRank <= baseRank ? normalized : baseRole;
 }
 
+function parseTenantId(value?: string | null): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 async function resolveTenantContext(token: string, requestedRole?: string | null): Promise<AuthenticatedTenantContext | null> {
   const config = tokenLookup.get(token);
   if (!config) return null;
@@ -135,6 +142,43 @@ async function resolveTenantContext(token: string, requestedRole?: string | null
     userId: config.userId,
     role: applyRoleOverride(config.role || "member", requestedRole),
     tokenLabel: config.label,
+  };
+}
+
+async function resolveSupabaseTenantContext(
+  token: string,
+  requestedRole?: string | null,
+  requestedTenantId?: string | null,
+): Promise<AuthenticatedTenantContext | null> {
+  const claims = await verifySupabaseJwt(token);
+  if (!claims) return null;
+
+  const tenantIdFromClaims =
+    (claims.app_metadata?.tenant_id as string | number | undefined) ??
+    (claims.user_metadata?.tenant_id as string | number | undefined) ??
+    claims.tenant_id;
+
+  const resolvedTenantId =
+    parseTenantId(requestedTenantId) ??
+    (typeof tenantIdFromClaims === "number"
+      ? tenantIdFromClaims
+      : parseTenantId(String(tenantIdFromClaims)));
+
+  if (!resolvedTenantId) return null;
+
+  const tenant = await storage.getTenant(resolvedTenantId);
+  if (!tenant) return null;
+
+  const roleFromClaims =
+    (claims.app_metadata?.role as string | undefined) ??
+    (claims.user_metadata?.role as string | undefined);
+
+  return {
+    tenantId: tenant.id,
+    plan: tenant.plan as AuthenticatedTenantContext["plan"],
+    userId: claims.sub,
+    role: applyRoleOverride((roleFromClaims as TenantRole) || "member", requestedRole),
+    tokenLabel: "supabase",
   };
 }
 
@@ -162,7 +206,10 @@ export async function requireAuthContext(req: Request, res: Response, next: Next
   }
 
   try {
-    const tenantContext = await resolveTenantContext(token, req.header("x-tenant-role"));
+    const requestedRole = req.header("x-tenant-role");
+    const tenantContext =
+      (await resolveTenantContext(token, requestedRole)) ??
+      (await resolveSupabaseTenantContext(token, requestedRole, req.header("x-tenant-id")));
     if (!tenantContext) {
       return res.status(401).json({ message: "Invalid or expired token" });
     }
