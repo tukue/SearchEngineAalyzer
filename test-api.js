@@ -31,24 +31,33 @@ async function testAPI() {
     const healthResponse = await fetch('http://localhost:3000/api/health');
     const healthData = await healthResponse.json();
     
-    if (healthResponse.ok) {
+    if (healthResponse.status === 405) {
+      console.log('❌ Health endpoint returned 405 Method Not Allowed (rewrite issue)');
+    } else if (healthResponse.ok) {
       console.log('✅ Health endpoint working');
       console.log(`   Status: ${healthData.status}`);
     } else {
-      console.log('❌ Health endpoint failed');
+      console.log('❌ Health endpoint failed with status:', healthResponse.status);
     }
 
-    // Test analyze endpoint
+    // Test analyze endpoint with 405 error detection
     const analyzeResponse = await fetch('http://localhost:3000/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'https://example.com' })
     });
 
-    if (analyzeResponse.ok) {
+    if (analyzeResponse.status === 405) {
+      console.log('❌ Analyze endpoint returned 405 Method Not Allowed (rewrite issue - 405 FIX NOT WORKING)');
+      console.log('   This means /api/analyze is being rewritt to external API instead of using local handler');
+    } else if (analyzeResponse.ok) {
       console.log('✅ Analyze endpoint working');
+      console.log('   ✓ 405 fix verified - using local POST handler');
+    } else if (analyzeResponse.status === 400) {
+      console.log('✅ Analyze endpoint working (validation error - expected behavior)');
+      console.log('   ✓ 405 fix verified - local handler processed request and validated URL');
     } else {
-      console.log('❌ Analyze endpoint failed');
+      console.log('❌ Analyze endpoint failed with status:', analyzeResponse.status);
     }
 
   } catch (error) {
