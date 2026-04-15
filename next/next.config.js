@@ -19,12 +19,25 @@ const nextConfig = {
     return config;
   },
   async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${process.env.API_BASE_URL ?? "http://localhost:5000"}/api/:path*`,
-      },
-    ]
+    return {
+      beforeFiles: [
+        // Don't rewrite local Next.js API routes, only external ones
+        {
+          source: "/api/analyze",
+          destination: "/api/analyze",
+        },
+        {
+          source: "/api/health",
+          destination: "/api/health",
+        },
+      ],
+      afterFiles: [
+        {
+          source: "/api/:path*",
+          destination: `${process.env.API_BASE_URL ?? "http://localhost:5000"}/api/:path*`,
+        },
+      ],
+    }
   },
 };
 
