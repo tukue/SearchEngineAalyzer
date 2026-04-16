@@ -26,6 +26,11 @@ const migratedEndpoints = process.env.NEXT_MIGRATED_API_ENDPOINTS
   .filter(Boolean);
 
 const ANALYZE_ENDPOINT_NAME = "analyze";
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization"
+};
 
 function isNextEndpointEnabled(endpoint: string) {
   if (!migratedEndpoints || migratedEndpoints.length === 0) {
@@ -45,6 +50,212 @@ type MetaTagEntry = {
   tagType: "SEO" | "Social" | "Technical";
   isPresent: boolean;
 };
+
+async function analyzeTargetUrl(inputUrl: string) {
+  let normalizedUrl = inputUrl;
+  if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
+    normalizedUrl = `https://${normalizedUrl}`;
+  }
+
+  let html: string;
+  try {
+    html = await fetchPageContent(normalizedUrl);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to connect to the target website";
+    return NextResponse.json({ message }, { status: 400, headers: CORS_HEADERS });
+  }
+
+  const $ = cheerio.load(html);
+
+  const foundMetaTags: MetaTagEntry[] = [];
+  let seoCount = 0;
+  let socialCount = 0;
+  let technicalCount = 0;
+  let missingCount = 0;
+
+  const titleTag = $("title").first().text();
+  if (titleTag) {
+    foundMetaTags.push({
+      name: "title",
+      content: titleTag,
+      tagType: "SEO",
+      isPresent: true
+    });
+    seoCount++;
+  } else {
+    foundMetaTags.push({
+      name: "title",
+      content: "Missing",
+      tagType: "SEO",
+      isPresent: false
+    });
+    missingCount++;
+  }
+
+  const canonicalLink = $('link[rel="canonical"]').attr("href");
+  if (canonicalLink) {
+    foundMetaTags.push({
+      rel: "canonical",
+      content: canonicalLink,
+      tagType: "SEO",
+      isPresent: true
+    });
+    seoCount++;
+  } else {
+    foundMetaTags.push({
+      rel: "canonical",
+      content: "Missing",
+      tagType: "SEO",
+      isPresent: false
+    });
+    missingCount++;
+  }
+
+  $("meta").each((_, elem) => {
+    const name = $(elem).attr("name");
+    const property = $(elem).attr("property");
+    const httpEquiv = $(elem).attr("http-equiv");
+    const charset = $(elem).attr("charset");
+    const content = $(elem).attr("content") || "";
+
+    let tagType: "SEO" | "Social" | "Technical" = "Technical";
+
+    if (name && importantSeoTags.includes(name)) {
+      tagType = "SEO";
+      seoCount++;
+    } else if ((name && name.startsWith("twitter:")) || (property && property.startsWith("og:"))) {
+      tagType = "Social";
+      socialCount++;
+    } else if (charset || httpEquiv || importantTechnicalTags.includes(name || "")) {
+      tagType = "Technical";
+      technicalCount++;
+    } else if (name || property) {
+      tagType = "SEO";
+      seoCount++;
+    }
+
+    foundMetaTags.push({
+      name,
+      property,
+      httpEquiv,
+      charset,
+      content,
+      tagType,
+      isPresent: true
+    });
+  });
+
+  type RecommendationDraft = Omit<Recommendation, "id" | "analysisId">;
+
+  const recommendations: RecommendationDraft[] = [];
+
+  const tagExists = (tagName: string) =>
+    foundMetaTags.some(
+      (tag) =>
+        tag.name === tagName ||
+        tag.property === tagName ||
+        (tag.name === "title" && tagName === "title")
+    );
+
+  importantSeoTags.forEach((tag) => {
+    if (!tagExists(tag)) {
+      foundMetaTags.push({
+        name: tag,
+        content: "Missing",
+        tagType: "SEO",
+        isPresent: false
+      });
+      missingCount++;
+
+      const recommendation = buildRecommendations(tag);
+      if (recommendation) {
+        recommendations.push(recommendation);
+      }
+    }
+  });
+
+  importantSocialTags.forEach((tag) => {
+    if (!tagExists(tag)) {
+      foundMetaTags.push({
+        property: tag.startsWith("og:") ? tag : undefined,
+        name: tag.startsWith("twitter:") ? tag : undefined,
+        content: "Missing",
+        tagType: "Social",
+        isPresent: false
+      });
+      missingCount++;
+
+      const recommendation = buildRecommendations(tag);
+      if (recommendation) {
+        recommendations.push(recommendation);
+      }
+    }
+  });
+
+  importantTechnicalTags.forEach((tag) => {
+    if (!tagExists(tag) && ["robots", "charset", "content-type"].includes(tag)) {
+      foundMetaTags.push({
+        name: ["robots", "author", "generator", "language"].includes(tag) ? tag : undefined,
+        httpEquiv: ["content-type"].includes(tag) ? tag : undefined,
+        charset: tag === "charset" ? "missing" : undefined,
+        content: "Missing",
+        tagType: "Technical",
+        isPresent: false
+      });
+      missingCount++;
+
+      const recommendation = buildRecommendations(tag);
+      if (recommendation) {
+        recommendations.push(recommendation);
+      }
+    }
+  });
+
+  const totalImportantTags =
+    importantSeoTags.length +
+    importantSocialTags.filter((t) => ["og:title", "og:description", "og:image", "twitter:card"].includes(t)).length +
+    importantTechnicalTags.filter((t) => ["robots", "charset"].includes(t)).length;
+
+  const presentImportantTags = totalImportantTags - missingCount;
+  const healthScore = Math.round((presentImportantTags / totalImportantTags) * 100);
+
+  const tenantId = 1; // Default tenant for MVP
+
+  const normalizedMetaTags: MetaTag[] = foundMetaTags.map((tag) => ({
+    id: 0,
+    tenantId,
+    url: normalizedUrl,
+    name: tag.name ?? null,
+    property: tag.property ?? null,
+    content: tag.content ?? null,
+    httpEquiv: tag.httpEquiv ?? null,
+    charset: tag.charset ?? null,
+    rel: tag.rel ?? null,
+    tagType: tag.tagType,
+    isPresent: tag.isPresent
+  }));
+
+  const analysisResult: AnalysisResult = {
+    analysis: {
+      id: 0,
+      tenantId,
+      url: normalizedUrl,
+      totalCount: foundMetaTags.length,
+      seoCount,
+      socialCount,
+      technicalCount,
+      missingCount,
+      healthScore,
+      timestamp: new Date().toISOString()
+    },
+    tags: normalizedMetaTags,
+    recommendations: recommendations.map((rec) => ({ ...rec, id: 0, analysisId: 0 }))
+  };
+
+  const storedAnalysis = await storage.createAnalysis(analysisResult);
+  return NextResponse.json(storedAnalysis, { headers: CORS_HEADERS });
+}
 
 async function fetchPageContent(url: string): Promise<string> {
   const controller = new AbortController();
@@ -145,224 +356,64 @@ export async function POST(req: NextRequest) {
   if (!isNextEndpointEnabled(ANALYZE_ENDPOINT_NAME)) {
     return NextResponse.json(
       { message: "Next.js analyze handler disabled via NEXT_MIGRATED_API_ENDPOINTS" },
-      { status: 503 }
+      { status: 503, headers: CORS_HEADERS }
     );
   }
 
   try {
     const payload = await req.json();
     const { url } = urlSchema.parse(payload);
-
-    let normalizedUrl = url;
-    if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
-      normalizedUrl = `https://${normalizedUrl}`;
-    }
-
-    let html: string;
-    try {
-      html = await fetchPageContent(normalizedUrl);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to connect to the target website";
-      return NextResponse.json({ message }, { status: 400 });
-    }
-
-    const $ = cheerio.load(html);
-
-    const foundMetaTags: MetaTagEntry[] = [];
-    let seoCount = 0;
-    let socialCount = 0;
-    let technicalCount = 0;
-    let missingCount = 0;
-
-    const titleTag = $("title").first().text();
-    if (titleTag) {
-      foundMetaTags.push({
-        name: "title",
-        content: titleTag,
-        tagType: "SEO",
-        isPresent: true
-      });
-      seoCount++;
-    } else {
-      foundMetaTags.push({
-        name: "title",
-        content: "Missing",
-        tagType: "SEO",
-        isPresent: false
-      });
-      missingCount++;
-    }
-
-    const canonicalLink = $('link[rel="canonical"]').attr("href");
-    if (canonicalLink) {
-      foundMetaTags.push({
-        rel: "canonical",
-        content: canonicalLink,
-        tagType: "SEO",
-        isPresent: true
-      });
-      seoCount++;
-    } else {
-      foundMetaTags.push({
-        rel: "canonical",
-        content: "Missing",
-        tagType: "SEO",
-        isPresent: false
-      });
-      missingCount++;
-    }
-
-    $("meta").each((_, elem) => {
-      const name = $(elem).attr("name");
-      const property = $(elem).attr("property");
-      const httpEquiv = $(elem).attr("http-equiv");
-      const charset = $(elem).attr("charset");
-      const content = $(elem).attr("content") || "";
-
-      let tagType: "SEO" | "Social" | "Technical" = "Technical";
-
-      if (name && importantSeoTags.includes(name)) {
-        tagType = "SEO";
-        seoCount++;
-      } else if ((name && name.startsWith("twitter:")) || (property && property.startsWith("og:"))) {
-        tagType = "Social";
-        socialCount++;
-      } else if (charset || httpEquiv || importantTechnicalTags.includes(name || "")) {
-        tagType = "Technical";
-        technicalCount++;
-      } else if (name || property) {
-        tagType = "SEO";
-        seoCount++;
-      }
-
-      foundMetaTags.push({
-        name,
-        property,
-        httpEquiv,
-        charset,
-        content,
-        tagType,
-        isPresent: true
-      });
-    });
-
-    type RecommendationDraft = Omit<Recommendation, "id" | "analysisId">;
-
-    const recommendations: RecommendationDraft[] = [];
-
-    const tagExists = (tagName: string) =>
-      foundMetaTags.some(
-        (tag) =>
-          tag.name === tagName ||
-          tag.property === tagName ||
-          (tag.name === "title" && tagName === "title")
-      );
-
-    importantSeoTags.forEach((tag) => {
-      if (!tagExists(tag)) {
-        foundMetaTags.push({
-          name: tag,
-          content: "Missing",
-          tagType: "SEO",
-          isPresent: false
-        });
-        missingCount++;
-
-        const recommendation = buildRecommendations(tag);
-        if (recommendation) {
-          recommendations.push(recommendation);
-        }
-      }
-    });
-
-    importantSocialTags.forEach((tag) => {
-      if (!tagExists(tag)) {
-        foundMetaTags.push({
-          property: tag.startsWith("og:") ? tag : undefined,
-          name: tag.startsWith("twitter:") ? tag : undefined,
-          content: "Missing",
-          tagType: "Social",
-          isPresent: false
-        });
-        missingCount++;
-
-        const recommendation = buildRecommendations(tag);
-        if (recommendation) {
-          recommendations.push(recommendation);
-        }
-      }
-    });
-
-    importantTechnicalTags.forEach((tag) => {
-      if (!tagExists(tag) && ["robots", "charset", "content-type"].includes(tag)) {
-        foundMetaTags.push({
-          name: ["robots", "author", "generator", "language"].includes(tag) ? tag : undefined,
-          httpEquiv: ["content-type"].includes(tag) ? tag : undefined,
-          charset: tag === "charset" ? "missing" : undefined,
-          content: "Missing",
-          tagType: "Technical",
-          isPresent: false
-        });
-        missingCount++;
-
-        const recommendation = buildRecommendations(tag);
-        if (recommendation) {
-          recommendations.push(recommendation);
-        }
-      }
-    });
-
-    const totalImportantTags =
-      importantSeoTags.length +
-      importantSocialTags.filter((t) => ["og:title", "og:description", "og:image", "twitter:card"].includes(t)).length +
-      importantTechnicalTags.filter((t) => ["robots", "charset"].includes(t)).length;
-
-    const presentImportantTags = totalImportantTags - missingCount;
-    const healthScore = Math.round((presentImportantTags / totalImportantTags) * 100);
-
-    const tenantId = 1; // Default tenant for MVP
-
-    const normalizedMetaTags: MetaTag[] = foundMetaTags.map((tag) => ({
-      id: 0,
-      tenantId,
-      url: normalizedUrl,
-      name: tag.name ?? null,
-      property: tag.property ?? null,
-      content: tag.content ?? null,
-      httpEquiv: tag.httpEquiv ?? null,
-      charset: tag.charset ?? null,
-      rel: tag.rel ?? null,
-      tagType: tag.tagType,
-      isPresent: tag.isPresent
-    }));
-
-    const analysisResult: AnalysisResult = {
-      analysis: {
-        id: 0,
-        tenantId,
-        url: normalizedUrl,
-        totalCount: foundMetaTags.length,
-        seoCount,
-        socialCount,
-        technicalCount,
-        missingCount,
-        healthScore,
-        timestamp: new Date().toISOString()
-      },
-      tags: normalizedMetaTags,
-      recommendations: recommendations.map((rec) => ({ ...rec, id: 0, analysisId: 0 }))
-    };
-
-    const storedAnalysis = await storage.createAnalysis(analysisResult);
-    return NextResponse.json(storedAnalysis);
+    return await analyzeTargetUrl(url);
   } catch (error) {
     if (error instanceof z.ZodError) {
       const validationError = formatZodError(error);
-      return NextResponse.json({ message: validationError || "Invalid URL format" }, { status: 400 });
+      return NextResponse.json(
+        { message: validationError || "Invalid URL format" },
+        { status: 400, headers: CORS_HEADERS }
+      );
     }
 
     console.error("Next.js analyze handler error:", error);
-    return NextResponse.json({ message: "Failed to analyze website" }, { status: 500 });
+    return NextResponse.json({ message: "Failed to analyze website" }, { status: 500, headers: CORS_HEADERS });
   }
+}
+
+export async function GET(req: NextRequest) {
+  if (!isNextEndpointEnabled(ANALYZE_ENDPOINT_NAME)) {
+    return NextResponse.json(
+      { message: "Next.js analyze handler disabled via NEXT_MIGRATED_API_ENDPOINTS" },
+      { status: 503, headers: CORS_HEADERS }
+    );
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const url = searchParams.get("url");
+    if (!url) {
+      return NextResponse.json(
+        { message: "Missing url query parameter. Use /api/analyze?url=https://example.com" },
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
+    return await analyzeTargetUrl(urlSchema.parse({ url }).url);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const validationError = formatZodError(error);
+      return NextResponse.json(
+        { message: validationError || "Invalid URL format" },
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
+    console.error("Next.js analyze GET handler error:", error);
+    return NextResponse.json({ message: "Failed to analyze website" }, { status: 500, headers: CORS_HEADERS });
+  }
+}
+
+export function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: CORS_HEADERS
+  });
 }
