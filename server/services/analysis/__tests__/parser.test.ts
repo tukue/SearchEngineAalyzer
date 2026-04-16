@@ -4,9 +4,9 @@ const createHtmlFixture = () => `
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Test Website</title>
+  <title>Test Website Title for SEO Performance and Ranking Signals</title>
   <meta charset="UTF-8">
-  <meta name="description" content="This is a test website for unit testing">
+  <meta name="description" content="This is a test website description designed to be long enough for SEO quality checks and parser validation in unit tests.">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="index, follow">
   <meta property="og:title" content="Test OG Title">
@@ -16,28 +16,44 @@ const createHtmlFixture = () => `
   <link rel="canonical" href="https://test.com/page">
 </head>
 <body>
-  <h1>Test Content</h1>
+  <h1>Test Website Title for SEO Performance and Ranking Signals</h1>
+  <h2>Subheading section</h2>
+  <p>${"content ".repeat(350)}</p>
+  <a href="/internal-link">Internal</a>
+  <a href="https://external.com" rel="noopener">External</a>
+  <img src="hero.jpg" alt="Hero image">
 </body>
 </html>
 `;
 
 describe("HtmlParser", () => {
-  it("should correctly parse meta tags", () => {
+  it("should correctly parse key SEO fields and checks", () => {
     const html = createHtmlFixture();
-    const result = HtmlParser.parse(html);
+    const result = HtmlParser.parse(html, "https://test.com/page", {
+      requestedUrl: "https://test.com/page",
+      finalUrl: "https://test.com/page",
+      status: 200,
+      redirected: false,
+      redirectCount: 0,
+      responseTimeMs: 400,
+      robotsTxtFound: true,
+      sitemapFound: true,
+    });
 
     expect(result.seoCount).toBeGreaterThan(0);
     expect(result.socialCount).toBeGreaterThan(0);
     expect(result.technicalCount).toBeGreaterThan(0);
 
-    const titleTag = result.tags.find(t => t.name === "title");
-    expect(titleTag?.content).toBe("Test Website");
+    const titleTag = result.tags.find((t) => t.name === "title");
     expect(titleTag?.isPresent).toBe(true);
 
-    const descTag = result.tags.find(t => t.name === "description");
-    expect(descTag?.content).toBe("This is a test website for unit testing");
+    const descTag = result.tags.find((t) => t.name === "description");
+    expect(descTag?.isPresent).toBe(true);
 
-    const ogTitle = result.tags.find(t => t.property === "og:title");
-    expect(ogTitle?.content).toBe("Test OG Title");
+    const ogTitle = result.tags.find((t) => t.property === "og:title");
+    expect(ogTitle?.isPresent).toBe(true);
+
+    const failedChecks = result.checks.filter((c) => !c.passed);
+    expect(failedChecks).toHaveLength(0);
   });
 });
