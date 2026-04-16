@@ -46,6 +46,29 @@ async function fetchHeadLike(url: string, headers: Record<string, string>): Prom
   }
 }
 
+function readHeader(response: unknown, headerName: string): string | undefined {
+  if (!response || typeof response !== "object") return undefined;
+  const headers = (response as any).headers;
+  if (!headers) return undefined;
+
+  if (typeof headers.get === "function") {
+    const value = headers.get(headerName);
+    return typeof value === "string" ? value : undefined;
+  }
+
+  if (headers instanceof Map) {
+    const value = headers.get(headerName);
+    return typeof value === "string" ? value : undefined;
+  }
+
+  if (typeof headers === "object") {
+    const value = headers[headerName] || headers[headerName.toLowerCase()];
+    return typeof value === "string" ? value : undefined;
+  }
+
+  return undefined;
+}
+
 export class UrlFetcher {
   static async fetch(url: string, options?: AnalyzerOptions): Promise<FetchResult> {
     if (!url || typeof url !== "string") {
@@ -68,22 +91,26 @@ export class UrlFetcher {
         throw createHttpError(`Failed to fetch website: ${response.status} ${response.statusText}`);
       }
 
-      const html = await response.text();
-      const finalUrl = response.url || parsedUrl.toString();
+      const html = typeof response.text === "function" ? await response.text() : "";
+      const finalUrl =
+        typeof (response as any).url === "string" && (response as any).url.length > 0
+          ? (response as any).url
+          : parsedUrl.toString();
       const final = new URL(finalUrl);
       const robotsTxtFound = await fetchHeadLike(`${final.origin}/robots.txt`, headers);
       const sitemapFound = await fetchHeadLike(`${final.origin}/sitemap.xml`, headers);
+      const redirected = Boolean((response as any).redirected);
 
       return {
         html,
         metrics: {
           requestedUrl: parsedUrl.toString(),
           finalUrl,
-          status: response.status,
-          redirected: response.redirected,
-          redirectCount: response.redirected ? 1 : 0,
+          status: typeof response.status === "number" ? response.status : 200,
+          redirected,
+          redirectCount: redirected ? 1 : 0,
           responseTimeMs,
-          contentType: response.headers.get("content-type") || undefined,
+          contentType: readHeader(response, "content-type"),
           robotsTxtFound,
           sitemapFound,
         },
