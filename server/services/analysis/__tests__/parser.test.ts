@@ -57,4 +57,36 @@ describe("HtmlParser", () => {
     const criticalFailures = result.checks.filter((c) => !c.passed && c.severity === "Critical");
     expect(criticalFailures).toHaveLength(0);
   });
+
+  it("should safely handle missing robots/viewport and special characters in title keywords", () => {
+    const html = `
+      <html>
+        <head>
+          <title>test (a+)+ keyword</title>
+          <meta name="description" content="desc">
+        </head>
+        <body>
+          <h1>Heading</h1>
+          <p>${"keyword ".repeat(50)}</p>
+        </body>
+      </html>
+    `;
+
+    const result = HtmlParser.parse(html, "https://test.com/page", {
+      requestedUrl: "https://test.com/page",
+      finalUrl: "https://test.com/page",
+      status: 200,
+      redirected: false,
+      redirectCount: 0,
+      responseTimeMs: 500,
+      robotsTxtFound: false,
+      sitemapFound: false,
+    });
+
+    const robotsCheck = result.checks.find((check) => check.key === "robots-meta");
+    expect(robotsCheck?.passed).toBe(true);
+
+    const viewportCheck = result.checks.find((check) => check.key === "viewport");
+    expect(viewportCheck?.passed).toBe(false);
+  });
 });

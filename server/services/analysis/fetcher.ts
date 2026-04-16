@@ -69,6 +69,29 @@ function readHeader(response: unknown, headerName: string): string | undefined {
   return undefined;
 }
 
+function deriveRedirectCount(response: unknown): number {
+  if (!response || typeof response !== "object") return 0;
+  const candidate = response as any;
+
+  if (typeof candidate.redirectCount === "number" && Number.isFinite(candidate.redirectCount)) {
+    return Math.max(0, Math.trunc(candidate.redirectCount));
+  }
+
+  if (Array.isArray(candidate.redirectedUrls)) {
+    return Math.max(0, candidate.redirectedUrls.length);
+  }
+
+  if (Array.isArray(candidate.urls)) {
+    return Math.max(0, candidate.urls.length - 1);
+  }
+
+  if (typeof candidate.redirected === "number" && Number.isFinite(candidate.redirected)) {
+    return Math.max(0, Math.trunc(candidate.redirected));
+  }
+
+  return Boolean(candidate.redirected) ? 1 : 0;
+}
+
 export class UrlFetcher {
   static async fetch(url: string, options?: AnalyzerOptions): Promise<FetchResult> {
     if (!url || typeof url !== "string") {
@@ -100,6 +123,7 @@ export class UrlFetcher {
       const robotsTxtFound = await fetchHeadLike(`${final.origin}/robots.txt`, headers);
       const sitemapFound = await fetchHeadLike(`${final.origin}/sitemap.xml`, headers);
       const redirected = Boolean((response as any).redirected);
+      const redirectCount = deriveRedirectCount(response);
 
       return {
         html,
@@ -108,7 +132,7 @@ export class UrlFetcher {
           finalUrl,
           status: typeof response.status === "number" ? response.status : 200,
           redirected,
-          redirectCount: redirected ? 1 : 0,
+          redirectCount,
           responseTimeMs,
           contentType: readHeader(response, "content-type"),
           robotsTxtFound,

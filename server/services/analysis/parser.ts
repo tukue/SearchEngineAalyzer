@@ -156,11 +156,16 @@ export class HtmlParser {
       .join(" ");
     const keywordInHeadings = mainKeyword ? headingText.includes(mainKeyword) : false;
 
-    const keywordTokens = mainKeyword.split(" ").filter(Boolean);
-    const tokenOccurrences = keywordTokens.reduce((total, token) => {
-      const matches = bodyLower.match(new RegExp(`\\b${token}\\b`, "g"));
-      return total + (matches?.length || 0);
-    }, 0);
+    const keywordTokens = mainKeyword
+      .split(" ")
+      .map((token) => token.trim().toLowerCase())
+      .filter(Boolean);
+    const bodyTokens = bodyLower.split(/[^a-z0-9]+/).filter(Boolean);
+    const tokenFrequency = bodyTokens.reduce<Record<string, number>>((acc, token) => {
+      acc[token] = (acc[token] || 0) + 1;
+      return acc;
+    }, {});
+    const tokenOccurrences = keywordTokens.reduce((total, token) => total + (tokenFrequency[token] || 0), 0);
     const stuffingRatio = wordCount > 0 ? (tokenOccurrences / wordCount) * 100 : 0;
 
     const normalizedPath = base.pathname;
@@ -192,7 +197,7 @@ export class HtmlParser {
       key: "viewport",
       category: "Technical SEO",
       severity: "Important",
-      passed: viewport.includes("width=device-width"),
+      passed: viewport.length > 0 && viewport.includes("width=device-width"),
       points: 8,
       issue: "Viewport meta tag is missing or not responsive.",
       whyItMatters: "Without viewport hints, mobile rendering can break.",
@@ -214,7 +219,7 @@ export class HtmlParser {
       key: "robots-meta",
       category: "Technical SEO",
       severity: "Critical",
-      passed: !robotsMeta.toLowerCase().includes("noindex"),
+      passed: !robotsMeta || !robotsMeta.toLowerCase().includes("noindex"),
       points: 8,
       issue: "Meta robots contains noindex.",
       whyItMatters: "noindex can block your page from appearing in search.",
