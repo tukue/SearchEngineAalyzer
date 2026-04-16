@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { storage, getDefaultTenantContext } from '../server/storage';
-import { urlSchema } from '../shared/schema';
+import { urlSchema, PLAN_CONFIGS } from '../shared/schema';
 import { z } from 'zod';
 import { formatZodError } from '@shared/validation';
 import { analyzeUrl } from '../server/services/analysis';
@@ -14,9 +14,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  const { url } = req;
+  const requestUrl = new URL(req.url || '/', 'http://localhost');
+  const pathname = requestUrl.pathname;
   
-  if (url === '/api/health' && req.method === 'GET') {
+  if (pathname === '/api/health' && req.method === 'GET') {
     return res.status(200).json({
       status: 'ok',
       message: 'Meta Tag Analyzer API is healthy',
@@ -25,7 +26,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  if (url === '/api/analyze' && req.method === 'POST') {
+  if (pathname === '/api/plan' && req.method === 'GET') {
+    try {
+      const tenantContext = await getDefaultTenantContext();
+      const planConfig = PLAN_CONFIGS[tenantContext.plan];
+
+      return res.status(200).json({
+        currentPlan: tenantContext.plan,
+        entitlements: planConfig,
+        tenantId: tenantContext.tenantId,
+      });
+    } catch (error) {
+      console.error('Error fetching plan info:', error);
+      return res.status(500).json({ message: 'Failed to fetch plan information' });
+    }
+  }
+
+  if (pathname === '/api/usage/current' && req.method === 'GET') {
+    try {
+      const tenantContext = await getDefaultTenantContext();
+      const period = new Date().toISOString().slice(0, 7);
+      const usage = await storage.getCurrentUsage(tenantContext.tenantId, period);
+      const limit = PLAN_CONFIGS[tenantContext.plan].monthlyAuditLimit;
+      const used = usage?.auditCount ?? 0;
+      const usageRatio = limit > 0 ? used / limit : 0;
+
+      let warning_level: 'none' | 'warning_80' | 'warning_90' | 'exceeded' = 'none';
+      if (used >= limit) {
+        warning_level = 'exceeded';
+      } else if (usageRatio >= 0.9) {
+        warning_level = 'warning_90';
+      } else if (usageRatio >= 0.8) {
+        warning_level = 'warning_80';
+      }
+
+      return res.status(200).json({
+        period,
+        used,
+        limit,
+        warning_level,
+      });
+    } catch (error) {
+      console.error('Error fetching usage status:', error);
+      return res.status(500).json({ message: 'Failed to fetch usage status' });
+    }
+  }
+
+  if (pathname === '/api/analyze' && req.method === 'POST') {
     try {
       const { url: targetUrl } = urlSchema.parse(req.body);
       
@@ -58,5 +105,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  return res.status(404).json({ message: 'API endpoint not found' });
+  return res.status(404).json({ message: `API endpoint not found for ${req.method} ${pathname}` });
 }
