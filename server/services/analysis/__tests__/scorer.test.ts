@@ -2,56 +2,50 @@ import { Scorer } from "../scorer";
 import { ParsedData } from "../types";
 
 describe("Scorer", () => {
-  it("should compute top fixes correctly", () => {
+  it("should compute top fixes and weighted score", () => {
     const parsedData: ParsedData = {
-      tags: [
-        { name: "title", isPresent: false, tagType: "SEO" }, // Critical
-        { name: "description", isPresent: false, tagType: "SEO" }, // Critical
-        { name: "viewport", isPresent: false, tagType: "Technical" }, // High
-        { name: "keywords", isPresent: false, tagType: "SEO" }, // Medium (default)
+      tags: [],
+      checks: [
+        {
+          key: "title-length",
+          category: "On-page SEO",
+          severity: "Critical",
+          passed: false,
+          points: 8,
+          issue: "Title length is outside recommended range.",
+          whyItMatters: "Title impacts relevance and CTR.",
+          recommendation: "Set title to 50-60 characters.",
+        },
+        {
+          key: "viewport",
+          category: "Technical SEO",
+          severity: "Important",
+          passed: false,
+          points: 8,
+          issue: "Viewport meta is missing.",
+          whyItMatters: "Viewport affects mobile usability.",
+          recommendation: "Add viewport meta tag.",
+        },
+        {
+          key: "word-count",
+          category: "Content quality",
+          severity: "Important",
+          passed: true,
+          points: 8,
+        },
       ],
       seoCount: 0,
       socialCount: 0,
       technicalCount: 0,
-      missingCount: 4
+      missingCount: 2,
     };
 
     const result = Scorer.score(parsedData);
 
-    expect(result.topFixes).toHaveLength(3);
-    
-    // Should prioritize Critical over High
+    expect(result.topFixes).toHaveLength(2);
     expect(result.topFixes[0].severity).toBe("Critical");
-    expect(result.topFixes[1].severity).toBe("Critical");
-    expect(result.topFixes[2].severity).toBe("High");
-    
-    // Should include title and description (Critical) and viewport (High)
-    const titles = result.topFixes.map(f => f.title);
-    expect(titles).toContain("Missing title");
-    expect(titles).toContain("Missing description");
-    expect(titles).toContain("Missing viewport");
-    expect(titles).not.toContain("Missing keywords");
-  });
-
-  it("should dedupe fixes", () => {
-    // Scorer logic currently maps recommendations to fixes. 
-    // Recommendations are generated based on missing tags.
-    // If multiple tags are missing, multiple recommendations are generated.
-    // The current implementation doesn't explicitly dedupe because recommendations are unique per tag name in the loop.
-    // But let's verify it handles multiple missing tags gracefully.
-    
-    const parsedData: ParsedData = {
-      tags: [
-        { name: "title", isPresent: false, tagType: "SEO" },
-      ],
-      seoCount: 0,
-      socialCount: 0,
-      technicalCount: 0,
-      missingCount: 1
-    };
-
-    const result = Scorer.score(parsedData);
-    expect(result.topFixes).toHaveLength(1);
-    expect(result.topFixes[0].title).toBe("Missing title");
+    expect(result.recommendations).toHaveLength(2);
+    expect(result.healthScore).toBeLessThan(100);
+    expect(result.healthScore).toBeGreaterThan(0);
   });
 });
