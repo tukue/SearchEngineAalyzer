@@ -6,9 +6,11 @@ const createRequest = (path = '/api/health') => new NextRequest(`http://localhos
 
 describe('Next.js health route', () => {
   let originalEnv: string | undefined;
+  let originalFrameworkEnv: string | undefined;
 
   beforeEach(() => {
     originalEnv = process.env.NEXT_MIGRATED_API_ENDPOINTS;
+    originalFrameworkEnv = process.env.NEXT_FRAMEWORK_ENABLED;
   });
 
   afterEach(() => {
@@ -17,9 +19,16 @@ describe('Next.js health route', () => {
     } else {
       process.env.NEXT_MIGRATED_API_ENDPOINTS = originalEnv;
     }
+
+    if (originalFrameworkEnv === undefined) {
+      delete process.env.NEXT_FRAMEWORK_ENABLED;
+    } else {
+      process.env.NEXT_FRAMEWORK_ENABLED = originalFrameworkEnv;
+    }
   });
 
   it('returns ok when the health endpoint is enabled', async () => {
+    process.env.NEXT_FRAMEWORK_ENABLED = 'true';
     process.env.NEXT_MIGRATED_API_ENDPOINTS = 'health,analyze';
 
     const res = await healthHandler(createRequest());
@@ -35,6 +44,7 @@ describe('Next.js health route', () => {
   });
 
   it('returns ok when no migration list is provided', async () => {
+    process.env.NEXT_FRAMEWORK_ENABLED = 'true';
     delete process.env.NEXT_MIGRATED_API_ENDPOINTS;
 
     const res = await healthHandler(createRequest());
@@ -45,6 +55,7 @@ describe('Next.js health route', () => {
   });
 
   it('returns a 503 when the endpoint is disabled via migration gating', async () => {
+    process.env.NEXT_FRAMEWORK_ENABLED = 'true';
     process.env.NEXT_MIGRATED_API_ENDPOINTS = 'analyze';
 
     const res = await healthHandler(createRequest());
@@ -54,5 +65,16 @@ describe('Next.js health route', () => {
 
     const body = await res.json();
     expect(body.message).toContain('disabled');
+  });
+
+  it('returns a 503 when the framework flag is disabled', async () => {
+    delete process.env.NEXT_FRAMEWORK_ENABLED;
+    process.env.NEXT_MIGRATED_API_ENDPOINTS = 'health';
+
+    const res = await healthHandler(createRequest());
+
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.message).toContain('NEXT_FRAMEWORK_ENABLED');
   });
 });
